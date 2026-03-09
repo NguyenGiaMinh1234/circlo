@@ -70,10 +70,7 @@ export default function TextureCanvas({
     });
 
     // Initialize the freeDrawingBrush with PencilBrush
-    const brush = new PencilBrush(canvas);
-    brush.color = brushColor;
-    brush.width = brushSize;
-    canvas.freeDrawingBrush = brush;
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
 
     fabricCanvasRef.current = canvas;
 
@@ -118,13 +115,14 @@ export default function TextureCanvas({
         }
         break;
 
-      case 'eraser':
+      case 'eraser': {
         canvas.isDrawingMode = true;
         const eraserBrush = new PencilBrush(canvas);
         eraserBrush.color = '#ffffff';
         eraserBrush.width = brushSize;
         canvas.freeDrawingBrush = eraserBrush;
         break;
+      }
 
       case 'text':
         canvas.defaultCursor = 'text';

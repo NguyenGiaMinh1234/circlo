@@ -83,7 +83,7 @@ const BookingForm = () => {
 
       toast.success("Đặt thiết kế thành công! Chúng tôi sẽ liên hệ bạn sớm.");
       navigate("/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Booking error:", error);
       toast.error("Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {

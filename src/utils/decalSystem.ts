@@ -17,13 +17,21 @@ export interface Decal {
   renderOrder?: number;
 }
 
+interface DecalUserData {
+  decalId?: string;
+}
+
+type DecalMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> & {
+  userData: DecalUserData;
+};
+
 /**
  * Decal System for applying single images/patterns that can be moved
  */
 export class DecalSystem {
   private decals: Decal[] = [];
   private mesh: THREE.Mesh;
-  private decalMeshes: THREE.Mesh[] = [];
+  private decalMeshes: DecalMesh[] = [];
   
   constructor(mesh: THREE.Mesh) {
     this.mesh = mesh;
@@ -168,10 +176,7 @@ export class DecalSystem {
             const decal = this.decals.find(d => d.id === decalId);
             if (decal) {
               decal.texture = this.createPlaceholderTexture();
-              const decalMesh = this.decalMeshes.find(m => {
-                const userData = (m as any).userData;
-                return userData && userData.decalId === decalId;
-              });
+              const decalMesh = this.decalMeshes.find((mesh) => mesh.userData.decalId === decalId);
               if (decalMesh && decalMesh.material instanceof THREE.MeshBasicMaterial) {
                 decalMesh.material.map = decal.texture;
                 decalMesh.material.needsUpdate = true;
@@ -207,8 +212,7 @@ export class DecalSystem {
     
     this.decals.push(decal);
     const decalMesh = this.createDecalMesh(decal, decal.targetMesh ?? this.mesh, options?.clipPart);
-    // Store decal ID in mesh userData for later updates
-    (decalMesh as any).userData = { decalId };
+    decalMesh.userData = { decalId };
     
     console.log(`✓ Added decal ${decalId} to ${partName}`);
     return decalId;
@@ -232,7 +236,7 @@ export class DecalSystem {
   /**
    * Create a mesh for the decal
    */
-  private createDecalMesh(decal: Decal, targetMesh: THREE.Mesh, clipPart?: MeshPart): THREE.Mesh {
+  private createDecalMesh(decal: Decal, targetMesh: THREE.Mesh, clipPart?: MeshPart): DecalMesh {
     const geometry = this.createDecalGeometry(
       targetMesh,
       decal.position,
@@ -253,7 +257,7 @@ export class DecalSystem {
       side: THREE.DoubleSide
     });
     
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, material) as DecalMesh;
 
     mesh.position.set(0, 0, 0);
     mesh.rotation.set(0, 0, 0);
@@ -281,7 +285,7 @@ export class DecalSystem {
     currentMesh.parent?.remove(currentMesh);
 
     const replacement = this.createDecalMesh(decal, decal.targetMesh ?? this.mesh);
-    (replacement as any).userData = { decalId: decal.id };
+    replacement.userData = { decalId: decal.id };
     replacement.renderOrder = currentMesh.renderOrder;
     this.decalMeshes[index] = replacement;
   }
@@ -438,7 +442,7 @@ export class DecalSystem {
     flipX?: boolean;
     flipY?: boolean;
     targetMesh?: THREE.Mesh;
-    clipPart?: any;
+    clipPart?: MeshPart;
     renderOrder?: number;
   }): void {
     const index = this.decals.findIndex(d => d.id === decalId);

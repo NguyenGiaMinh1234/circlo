@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react';
 import * as THREE from 'three';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 interface SmoothCameraConfig {
   transitionDuration?: number;
@@ -8,6 +9,14 @@ interface SmoothCameraConfig {
   maxDistance?: number;
   zoomSpeed?: number;
 }
+
+type CameraControls = OrbitControlsImpl | null | undefined;
+
+const easingFunctions: Record<NonNullable<SmoothCameraConfig['easing']>, (t: number) => number> = {
+  easeInOut: (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+  easeOut: (t: number) => 1 - Math.pow(1 - t, 3),
+  linear: (t: number) => t,
+};
 
 export function useSmoothCamera(config: SmoothCameraConfig = {}) {
   const {
@@ -21,15 +30,9 @@ export function useSmoothCamera(config: SmoothCameraConfig = {}) {
   const animationRef = useRef<number | null>(null);
   const isAnimatingRef = useRef(false);
 
-  const easingFunctions = {
-    easeInOut: (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
-    easeOut: (t: number) => 1 - Math.pow(1 - t, 3),
-    linear: (t: number) => t,
-  };
-
   const animateCamera = useCallback((
     camera: THREE.PerspectiveCamera,
-    controls: any,
+    controls: CameraControls,
     targetPosition: THREE.Vector3,
     targetLookAt: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
     onComplete?: () => void
@@ -71,7 +74,7 @@ export function useSmoothCamera(config: SmoothCameraConfig = {}) {
 
   const smoothZoom = useCallback((
     camera: THREE.PerspectiveCamera,
-    controls: any,
+    controls: CameraControls,
     delta: number,
     onComplete?: () => void
   ) => {
@@ -88,7 +91,7 @@ export function useSmoothCamera(config: SmoothCameraConfig = {}) {
 
   const smoothRotateToView = useCallback((
     camera: THREE.PerspectiveCamera,
-    controls: any,
+    controls: CameraControls,
     view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom' | 'isometric',
     distance: number = 5,
     onComplete?: () => void
@@ -111,7 +114,7 @@ export function useSmoothCamera(config: SmoothCameraConfig = {}) {
 
   const smoothReset = useCallback((
     camera: THREE.PerspectiveCamera,
-    controls: any,
+    controls: CameraControls,
     defaultPosition: THREE.Vector3 = new THREE.Vector3(0, 0, 5),
     onComplete?: () => void
   ) => {
@@ -120,7 +123,7 @@ export function useSmoothCamera(config: SmoothCameraConfig = {}) {
 
   const focusOnPart = useCallback((
     camera: THREE.PerspectiveCamera,
-    controls: any,
+    controls: CameraControls,
     boundingBox: THREE.Box3,
     padding: number = 1.5,
     onComplete?: () => void

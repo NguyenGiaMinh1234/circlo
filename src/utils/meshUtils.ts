@@ -130,7 +130,7 @@ export function createRegionHelpers(
       name === selectedRegion ? 0x3b82f6 : 0x888888
     );
     helper.name = `helper_${name}`;
-    (helper as any).userData.regionName = name;
+    (helper as THREE.Box3Helper & { userData: { regionName?: string } }).userData.regionName = name;
     group.add(helper);
   }
   

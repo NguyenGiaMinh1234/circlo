@@ -16,6 +16,12 @@ import type { DecalInstance } from "@/types/decal";
 import type { DesignTool } from "@/components/design3d/BottomToolbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+declare global {
+  interface Window {
+    __partTextureSystem?: PartTextureSystem;
+  }
+}
+
 interface Model3DViewerProps {
   modelPath: string;
   productType: string;
@@ -730,10 +736,10 @@ function Model({
     if (!partTextureSystem || !onTextureRotationChange || !onTextureFlipChange) return;
     
     // Store callbacks in window for access (temporary solution)
-    (window as any).__partTextureSystem = partTextureSystem;
+    window.__partTextureSystem = partTextureSystem;
     
     return () => {
-      delete (window as any).__partTextureSystem;
+      delete window.__partTextureSystem;
     };
   }, [partTextureSystem, onTextureRotationChange, onTextureFlipChange]);
 

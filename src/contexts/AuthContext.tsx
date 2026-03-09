@@ -1,18 +1,21 @@
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import type { AuthError, AuthResponse, Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export type AppRole = "admin" | "moderator" | "user";
+
+type AuthMessageResult<T = AuthResponse["data"]> = Promise<{ data?: T; error: { message: string } | null }>;
+type SignOutResult = Promise<{ error: AuthError | null }>;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   roles: AppRole[];
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ data?: any; error: { message: string } | null }>;
-  signIn: (email: string, password: string) => Promise<{ data?: any; error: { message: string } | null }>;
-  signOut: () => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string) => AuthMessageResult;
+  signIn: (email: string, password: string) => AuthMessageResult;
+  signOut: () => SignOutResult;
   resetPassword: (email: string) => Promise<{ error: { message: string } | null }>;
   hasRole: (role: AppRole) => boolean;
   isAdmin: () => boolean;
@@ -27,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<AppRole[]>([]);
 
-  const fetchUserRoles = useCallback(async (userId: string) => {
+  const fetchUserRoles = useCallback(async (userId: string): Promise<AppRole[]> => {
     try {
       const { data, error } = await supabase
         .from("user_roles")
