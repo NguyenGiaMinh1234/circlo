@@ -41,10 +41,10 @@ const DeferredChatBox = () => {
     if (shouldRender) return;
 
     const enable = () => setShouldRender(true);
-    const idleCallback =
-      "requestIdleCallback" in window
-        ? window.requestIdleCallback(enable, { timeout: 1800 })
-        : window.setTimeout(enable, 1200);
+    const w = window as any;
+    const idleCallback = w.requestIdleCallback
+      ? w.requestIdleCallback(enable, { timeout: 1800 })
+      : setTimeout(enable, 1200);
 
     const eagerEvents: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart"];
     eagerEvents.forEach((eventName) => window.addEventListener(eventName, enable, { once: true, passive: true }));
