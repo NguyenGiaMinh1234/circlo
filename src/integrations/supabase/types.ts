@@ -47,164 +47,121 @@ export type Database = {
         }
         Relationships: []
       }
-      designs: {
+      orders: {
         Row: {
+          booking_id: string | null
           created_at: string
-          design_data: Json
+          design_id: string | null
           id: string
-          is_public: boolean
-          name: string
-          product_id: string
-          thumbnail_url: string | null
+          notes: string | null
+          product_name: string
+          quantity: number
+          shipping_address: string | null
+          status: string
+          total_price: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          booking_id?: string | null
           created_at?: string
-          design_data?: Json
+          design_id?: string | null
           id?: string
-          is_public?: boolean
-          name: string
-          product_id: string
-          thumbnail_url?: string | null
+          notes?: string | null
+          product_name: string
+          quantity?: number
+          shipping_address?: string | null
+          status?: string
+          total_price?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          booking_id?: string | null
           created_at?: string
-          design_data?: Json
+          design_id?: string | null
           id?: string
-          is_public?: boolean
-          name?: string
-          product_id?: string
-          thumbnail_url?: string | null
+          notes?: string | null
+          product_name?: string
+          quantity?: number
+          shipping_address?: string | null
+          status?: string
+          total_price?: number | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "designs_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "orders_booking_id_fkey"
+            columns: ["booking_id"]
             isOneToOne: false
-            referencedRelation: "products"
+            referencedRelation: "design_bookings"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      orders: {
-        Row: {
-          created_at: string
-          design_id: string | null
-          id: string
-          notes: string | null
-          shipping_address: string | null
-          status: string
-          total_amount: number
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          design_id?: string | null
-          id?: string
-          notes?: string | null
-          shipping_address?: string | null
-          status?: string
-          total_amount?: number
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          design_id?: string | null
-          id?: string
-          notes?: string | null
-          shipping_address?: string | null
-          status?: string
-          total_amount?: number
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
           {
             foreignKeyName: "orders_design_id_fkey"
             columns: ["design_id"]
             isOneToOne: false
-            referencedRelation: "designs"
+            referencedRelation: "saved_designs"
             referencedColumns: ["id"]
           },
         ]
       }
-      products: {
-        Row: {
-          base_price: number
-          category: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          model_url: string | null
-          name: string
-          thumbnail_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          base_price?: number
-          category?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          model_url?: string | null
-          name: string
-          thumbnail_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          base_price?: number
-          category?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          model_url?: string | null
-          name?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
-          address: string | null
           avatar_url: string | null
           created_at: string
           full_name: string | null
           id: string
           phone: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
-          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      saved_designs: {
+        Row: {
+          created_at: string
+          design_data: Json
+          id: string
+          name: string
+          product_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          design_data?: Json
+          id?: string
+          name?: string
+          product_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          address?: string | null
-          avatar_url?: string | null
           created_at?: string
-          full_name?: string | null
+          design_data?: Json
           id?: string
-          phone?: string | null
+          name?: string
+          product_id?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -212,19 +169,16 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string

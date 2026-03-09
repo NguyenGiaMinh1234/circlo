@@ -43,8 +43,7 @@ export function ProductDropdown({ selectedProduct, onProductChange, className }:
         <DropdownMenuContent
           align="start"
           sideOffset={10}
-          onOpenAutoFocus={(event) => event.preventDefault()}
-          onCloseAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event: any) => event.preventDefault()}
           className="w-56 border-white/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,247,255,0.84),rgba(255,241,248,0.8))] shadow-xl backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(240,247,255,0.72),rgba(255,241,248,0.68))]"
         >
           {products.map((product) => (
