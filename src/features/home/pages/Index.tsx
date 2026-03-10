@@ -1,4 +1,5 @@
 import Header from "@/shared/components/Header";
+
 import VideoHero from "@/features/home/components/VideoHero";
 import Products from "@/features/products/components/Products";
 import PromoImageRail from "@/features/home/components/PromoImageRail";
