@@ -91,7 +91,7 @@ const RegisterForm = () => {
             <Input
               id="fullName"
               type="text"
-              placeholder="Nguyễn Văn A"
+              placeholder="Nhập họ và tên"
               value={formData.fullName}
               onChange={(e) =>
                 setFormData({ ...formData, fullName: e.target.value })
@@ -109,7 +109,7 @@ const RegisterForm = () => {
             <Input
               id="register-email"
               type="email"
-              placeholder="email@example.com"
+              placeholder="Nhập email của bạn"
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
@@ -125,7 +125,7 @@ const RegisterForm = () => {
           <Input
             id="register-password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
             value={formData.password}
             onChange={(e) =>
               setFormData({ ...formData, password: e.target.value })
@@ -139,7 +139,7 @@ const RegisterForm = () => {
           <Input
             id="register-confirm"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập lại mật khẩu"
             value={formData.confirmPassword}
             onChange={(e) =>
               setFormData({ ...formData, confirmPassword: e.target.value })

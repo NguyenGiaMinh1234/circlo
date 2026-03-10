@@ -68,7 +68,7 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
             <Input
               id="email"
               type="email"
-              placeholder="email@example.com"
+              placeholder="Nhập email của bạn"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="pl-10"
@@ -82,7 +82,7 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
           <Input
             id="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập mật khẩu"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             disabled={isLoading}
