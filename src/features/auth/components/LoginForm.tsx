@@ -82,7 +82,7 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
           <Input
             id="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập mật khẩu"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             disabled={isLoading}

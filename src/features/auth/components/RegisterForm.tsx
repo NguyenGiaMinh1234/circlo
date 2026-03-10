@@ -139,7 +139,7 @@ const RegisterForm = () => {
           <Input
             id="register-confirm"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập lại mật khẩu"
             value={formData.confirmPassword}
             onChange={(e) =>
               setFormData({ ...formData, confirmPassword: e.target.value })
