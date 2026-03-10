@@ -125,7 +125,7 @@ const RegisterForm = () => {
           <Input
             id="register-password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
             value={formData.password}
             onChange={(e) =>
               setFormData({ ...formData, password: e.target.value })
