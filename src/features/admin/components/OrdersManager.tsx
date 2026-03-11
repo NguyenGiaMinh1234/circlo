@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { Check, X, Eye, CheckCircle, Loader2 } from "lucide-react";
 
-interface Order {
+interface OrderWithProfile {
   id: string;
   user_id: string;
   product_name: string;
@@ -19,29 +22,56 @@ interface Order {
   shipping_address: string | null;
   notes: string | null;
   created_at: string;
+  profiles: {
+    full_name: string | null;
+    phone: string | null;
+  } | null;
 }
 
-const statusOptions = [
-  { value: "pending", label: "Chờ xử lý", color: "bg-yellow-500/10 text-yellow-500" },
-  { value: "confirmed", label: "Đã xác nhận", color: "bg-blue-500/10 text-blue-500" },
-  { value: "processing", label: "Đang xử lý", color: "bg-purple-500/10 text-purple-500" },
-  { value: "shipped", label: "Đang giao", color: "bg-orange-500/10 text-orange-500" },
-  { value: "delivered", label: "Đã giao", color: "bg-green-500/10 text-green-500" },
-  { value: "cancelled", label: "Đã hủy", color: "bg-red-500/10 text-red-500" },
-];
+const statusConfig: Record<string, { label: string; variant: "default" | "destructive" | "outline" | "secondary" }> = {
+  pending: { label: "Chờ xử lý", variant: "outline" },
+  confirmed: { label: "Đã xác nhận", variant: "secondary" },
+  processing: { label: "Đang xử lý", variant: "secondary" },
+  shipped: { label: "Đang giao", variant: "secondary" },
+  delivered: { label: "Đã giao", variant: "default" },
+  cancelled: { label: "Đã hủy", variant: "destructive" },
+};
 
 const OrdersManager = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithProfile | null>(null);
 
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("*")
+        .select("*, profiles!orders_user_id_fkey(full_name, phone)")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Fallback: fetch separately
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (fallbackError) throw fallbackError;
+
+        const userIds = [...new Set((fallbackData || []).map((o: any) => o.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", userIds);
+
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        const merged = (fallbackData || []).map((o: any) => ({
+          ...o,
+          profiles: profileMap.get(o.user_id) || null,
+        }));
+        setOrders(merged);
+        return;
+      }
       setOrders((data as any[]) || []);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -54,68 +84,169 @@ const OrdersManager = () => {
   useEffect(() => { fetchOrders(); }, []);
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
+    setUpdatingId(orderId);
     try {
       const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
       if (error) throw error;
-      toast({ title: "Thành công", description: "Đã cập nhật trạng thái đơn hàng" });
+      toast({ title: "Thành công", description: `Đã cập nhật: ${statusConfig[newStatus]?.label || newStatus}` });
       fetchOrders();
     } catch (error) {
       toast({ title: "Lỗi", description: "Không thể cập nhật trạng thái", variant: "destructive" });
+    } finally {
+      setUpdatingId(null);
     }
   };
-
-  const getStatusStyle = (status: string) => statusOptions.find((s) => s.value === status)?.color || "bg-gray-500/10 text-gray-500";
-  const getStatusLabel = (status: string) => statusOptions.find((s) => s.value === status)?.label || status;
 
   if (loading) {
     return <Card><CardContent className="p-6"><div className="animate-pulse space-y-4">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-muted rounded" />)}</div></CardContent></Card>;
   }
 
   return (
-    <Card>
-      <CardHeader><CardTitle>Quản lý đơn hàng</CardTitle></CardHeader>
-      <CardContent>
-        {orders.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Chưa có đơn hàng nào</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mã đơn</TableHead>
-                  <TableHead>Sản phẩm</TableHead>
-                  <TableHead>SL</TableHead>
-                  <TableHead>Tổng tiền</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>Cập nhật</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
-                    <TableCell>{order.product_name}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
-                    <TableCell className="font-medium">{(order.total_price || 0).toLocaleString("vi-VN")}đ</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusStyle(order.status)}`}>{getStatusLabel(order.status)}</span>
-                    </TableCell>
-                    <TableCell>{new Date(order.created_at).toLocaleDateString("vi-VN")}</TableCell>
-                    <TableCell>
-                      <Select defaultValue={order.status} onValueChange={(v) => handleStatusChange(order.id, v)}>
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>{statusOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </TableCell>
+    <>
+      <Card>
+        <CardHeader><CardTitle>Quản lý đơn hàng</CardTitle></CardHeader>
+        <CardContent>
+          {orders.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Chưa có đơn hàng nào</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Sản phẩm</TableHead>
+                    <TableHead>SL</TableHead>
+                    <TableHead>Tổng tiền</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedOrder(order)}>
+                      <TableCell className="font-medium">{order.profiles?.full_name || "Chưa cập nhật"}</TableCell>
+                      <TableCell>{order.product_name}</TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell className="font-medium">{(order.total_price || 0).toLocaleString("vi-VN")}đ</TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig[order.status]?.variant || "outline"}>
+                          {statusConfig[order.status]?.label || order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(order.created_at).toLocaleDateString("vi-VN")}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => setSelectedOrder(order)}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          {order.status === "pending" && (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 text-green-600 border-green-200 hover:bg-green-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "confirmed")}>
+                                {updatingId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "cancelled")}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          {(order.status === "confirmed" || order.status === "processing") && (
+                            <Button size="sm" variant="outline" className="h-8 text-emerald-600 border-emerald-200 hover:bg-emerald-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "delivered")}>
+                              {updatingId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đơn hàng</DialogTitle>
+            <DialogDescription>Thông tin chi tiết đơn hàng và khách hàng</DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Khách hàng</p>
+                  <p className="font-medium">{selectedOrder.profiles?.full_name || "Chưa cập nhật"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Số điện thoại</p>
+                  <p className="font-medium">{selectedOrder.profiles?.phone || "Chưa cập nhật"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sản phẩm</p>
+                  <p className="font-medium">{selectedOrder.product_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Số lượng</p>
+                  <p className="font-medium">{selectedOrder.quantity}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tổng tiền</p>
+                  <p className="font-medium text-lg">{(selectedOrder.total_price || 0).toLocaleString("vi-VN")}đ</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Trạng thái</p>
+                  <Badge variant={statusConfig[selectedOrder.status]?.variant || "outline"}>
+                    {statusConfig[selectedOrder.status]?.label || selectedOrder.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Ngày đặt</p>
+                  <p className="font-medium">{new Date(selectedOrder.created_at).toLocaleString("vi-VN")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Mã đơn</p>
+                  <p className="font-mono text-xs">{selectedOrder.id}</p>
+                </div>
+              </div>
+
+              {selectedOrder.shipping_address && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Địa chỉ giao hàng</p>
+                  <p className="mt-1 text-sm bg-muted/50 p-3 rounded-lg">{selectedOrder.shipping_address}</p>
+                </div>
+              )}
+
+              {selectedOrder.notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Ghi chú</p>
+                  <p className="mt-1 text-sm bg-muted/50 p-3 rounded-lg">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2 border-t">
+                {selectedOrder.status === "pending" && (
+                  <>
+                    <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "confirmed"); setSelectedOrder(null); }}>
+                      <Check className="h-4 w-4 mr-2" /> Xác nhận
+                    </Button>
+                    <Button variant="destructive" className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "cancelled"); setSelectedOrder(null); }}>
+                      <X className="h-4 w-4 mr-2" /> Hủy đơn
+                    </Button>
+                  </>
+                )}
+                {(selectedOrder.status === "confirmed" || selectedOrder.status === "processing") && (
+                  <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "delivered"); setSelectedOrder(null); }}>
+                    <CheckCircle className="h-4 w-4 mr-2" /> Hoàn tất giao hàng
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
