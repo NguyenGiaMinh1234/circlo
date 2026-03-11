@@ -64,7 +64,7 @@ const HistoryPage = () => {
     <div className="flex flex-col min-h-screen brand-surface-gradient text-primary">
       <Header />
 
-      <main className="flex-1 px-6 pt-32 pb-20">
+      <main className="flex-1 px-6 pt-44 pb-20">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-semibold mb-12 text-center text-primary tracking-wide uppercase">
             Lịch sử đặt thiết kế của bạn
