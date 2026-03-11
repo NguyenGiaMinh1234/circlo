@@ -42,7 +42,7 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex items-center justify-center py-12 px-4 pt-32">
+      <main className="flex-1 flex items-center justify-center py-12 px-4 pt-44">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             {showForgotPassword ? (
