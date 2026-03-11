@@ -92,7 +92,7 @@ const BookingForm = () => {
   };
 
   return (
-    <section id="booking" className="py-32">
+    <section id="booking" className="pt-36 pb-32">
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16 space-y-6">
