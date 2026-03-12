@@ -14,6 +14,7 @@ const ChatBox = lazy(() => import("./features/chat/components/ChatBox"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const HistoryPage = lazy(() => import("./features/booking/pages/HistoryPage"));
 const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
+const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
