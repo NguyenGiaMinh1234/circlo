@@ -110,6 +110,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
+          birthday: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -118,6 +120,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
+          birthday?: string | null
           created_at?: string
           full_name?: string | null
           id: string
@@ -126,6 +130,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
+          birthday?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -190,6 +196,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_email_by_phone: { Args: { _phone: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
