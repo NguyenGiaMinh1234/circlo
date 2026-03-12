@@ -87,6 +87,7 @@ const App = () => (
               <Route path="/booking/history" element={<HistoryPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
