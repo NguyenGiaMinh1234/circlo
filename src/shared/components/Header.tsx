@@ -248,12 +248,15 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                     Admin
                   </Button>
                 )}
-                <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/25 rounded-xl">
+                <button
+                  onClick={() => navigateTo("/profile")}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/25 rounded-xl hover:bg-primary/20 transition-colors cursor-pointer"
+                >
                   <User className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs text-primary tracking-wide max-w-[150px] truncate">
                     {getUserDisplayName()}
                   </span>
-                </div>
+                </button>
                 <Button
                   variant="outline"
                   size="sm"
