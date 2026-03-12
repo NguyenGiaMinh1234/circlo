@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mail } from "lucide-react";
 
 interface LoginFormProps {
@@ -15,12 +16,14 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
   const navigate = useNavigate();
   const { signIn } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ emailOrPhone: "", password: "" });
+
+  const isPhoneNumber = (value: string) => /^[0-9+]{8,15}$/.test(value.trim());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    if (!formData.emailOrPhone || !formData.password) {
       toast({
         title: "Lỗi",
         description: "Vui lòng điền đầy đủ thông tin",
@@ -31,7 +34,27 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
 
     setIsLoading(true);
 
-    const { error } = await signIn(formData.email, formData.password);
+    let email = formData.emailOrPhone.trim();
+
+    // If input looks like a phone number, look up email
+    if (isPhoneNumber(email)) {
+      const { data, error } = await supabase.rpc("get_email_by_phone", {
+        _phone: email,
+      });
+
+      if (error || !data) {
+        setIsLoading(false);
+        toast({
+          title: "Lỗi đăng nhập",
+          description: "Không tìm thấy tài khoản với số điện thoại này",
+          variant: "destructive",
+        });
+        return;
+      }
+      email = data as string;
+    }
+
+    const { error } = await signIn(email, formData.password);
 
     setIsLoading(false);
 
@@ -62,15 +85,15 @@ const LoginForm = ({ onForgotPassword }: LoginFormProps) => {
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="emailOrPhone">Email hoặc Số điện thoại</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              id="email"
-              type="email"
-              placeholder="Nhập email của bạn"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              id="emailOrPhone"
+              type="text"
+              placeholder="Nhập email hoặc số điện thoại"
+              value={formData.emailOrPhone}
+              onChange={(e) => setFormData({ ...formData, emailOrPhone: e.target.value })}
               className="pl-10"
               disabled={isLoading}
             />

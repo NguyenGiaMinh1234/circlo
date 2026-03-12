@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Loader2, Mail, User } from "lucide-react";
+import { Loader2, Mail, User, Phone } from "lucide-react";
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
+    phone: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -53,7 +54,8 @@ const RegisterForm = () => {
     const { error } = await signUp(
       formData.email,
       formData.password,
-      formData.fullName
+      formData.fullName,
+      formData.phone
     );
 
     setIsLoading(false);
@@ -98,6 +100,25 @@ const RegisterForm = () => {
               }
               className="pl-10"
               disabled={isLoading}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="register-phone">Số điện thoại</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="register-phone"
+              type="tel"
+              placeholder="Nhập số điện thoại"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+              className="pl-10"
+              disabled={isLoading}
+              maxLength={15}
             />
           </div>
         </div>
