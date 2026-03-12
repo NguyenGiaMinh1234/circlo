@@ -152,6 +152,7 @@ Luxury brand palette:
   }
 
   .logo-text-3d {
+    font-family: "BD Street Sign Sans", "Bebas Neue", sans-serif;
     color: rgb(4 27 45);
     text-shadow:
       0 1px 0 rgba(255, 255, 255, 0.95),
