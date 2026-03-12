@@ -13,7 +13,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   roles: AppRole[];
-  signUp: (email: string, password: string, fullName?: string) => AuthMessageResult;
+  signUp: (email: string, password: string, fullName?: string, phone?: string) => AuthMessageResult;
   signIn: (email: string, password: string) => AuthMessageResult;
   signOut: () => SignOutResult;
   resetPassword: (email: string) => Promise<{ error: { message: string } | null }>;
