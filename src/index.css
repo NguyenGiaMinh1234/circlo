@@ -101,6 +101,7 @@ Luxury brand palette:
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
