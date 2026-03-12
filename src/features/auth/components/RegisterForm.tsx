@@ -25,7 +25,7 @@ const RegisterForm = () => {
     if (!formData.email || !formData.password || !formData.confirmPassword) {
       toast({
         title: "Lỗi",
-        description: "Vui lòng điền đầy đủ thông tin",
+        description: "Cho mình xin đầy đủ thông tin nhá",
         variant: "destructive",
       });
       return;
@@ -34,7 +34,7 @@ const RegisterForm = () => {
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Lỗi",
-        description: "Mật khẩu xác nhận không khớp",
+        description: "Mật khẩu của bạn không trùng rồi!",
         variant: "destructive",
       });
       return;
@@ -43,7 +43,7 @@ const RegisterForm = () => {
     if (formData.password.length < 6) {
       toast({
         title: "Lỗi",
-        description: "Mật khẩu phải có ít nhất 6 ký tự",
+        description: "Mật khẩu có ít nhất 6 ký tự",
         variant: "destructive",
       });
       return;
@@ -71,7 +71,7 @@ const RegisterForm = () => {
 
     toast({
       title: "Đăng ký thành công",
-      description: "Tài khoản của bạn đã được tạo!",
+      description: "Tài khoản của tình iu đã được tạo!",
     });
     navigate("/");
   };
@@ -93,7 +93,7 @@ const RegisterForm = () => {
             <Input
               id="fullName"
               type="text"
-              placeholder="Nhập họ và tên"
+              placeholder="Circlo xin quý danh nhá"
               value={formData.fullName}
               onChange={(e) =>
                 setFormData({ ...formData, fullName: e.target.value })
@@ -111,7 +111,7 @@ const RegisterForm = () => {
             <Input
               id="register-phone"
               type="tel"
-              placeholder="Nhập số điện thoại"
+              placeholder="Circlo xin số điện thoại nhá"
               value={formData.phone}
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
@@ -130,7 +130,7 @@ const RegisterForm = () => {
             <Input
               id="register-email"
               type="email"
-              placeholder="Nhập email của bạn"
+              placeholder="Circlo xin email nhá"
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
@@ -169,7 +169,11 @@ const RegisterForm = () => {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button
+          type="submit"
+          className="w-full border-0 bg-[linear-gradient(90deg,rgb(4_27_45)_0%,rgb(0_78_154)_48%,rgb(234_68_146)_100%)] text-white shadow-[0_14px_32px_rgba(4,27,45,0.2)] hover:opacity-95"
+          disabled={isLoading}
+        >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

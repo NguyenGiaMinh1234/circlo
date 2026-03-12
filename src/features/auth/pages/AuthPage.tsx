@@ -53,9 +53,19 @@ const AuthPage = () => {
                 onValueChange={(v) => setActiveTab(v as "login" | "register")}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Đăng nhập</TabsTrigger>
-                  <TabsTrigger value="register">Đăng ký</TabsTrigger>
+                <TabsList className="mb-6 grid w-full grid-cols-2 rounded-2xl bg-[linear-gradient(90deg,rgba(4,27,45,0.08),rgba(0,78,154,0.08),rgba(255,156,218,0.1))] p-1 text-primary">
+                  <TabsTrigger
+                    value="login"
+                    className="rounded-[0.9rem] font-semibold data-[state=active]:bg-[linear-gradient(90deg,rgb(4_27_45)_0%,rgb(0_78_154)_48%,rgb(234_68_146)_100%)] data-[state=active]:text-white data-[state=active]:shadow-[0_12px_24px_rgba(4,27,45,0.22)]"
+                  >
+                    Đăng nhập
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="register"
+                    className="rounded-[0.9rem] font-semibold data-[state=active]:bg-[linear-gradient(90deg,rgb(4_27_45)_0%,rgb(0_78_154)_48%,rgb(234_68_146)_100%)] data-[state=active]:text-white data-[state=active]:shadow-[0_12px_24px_rgba(4,27,45,0.22)]"
+                  >
+                    Đăng ký
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="login" className="mt-0">

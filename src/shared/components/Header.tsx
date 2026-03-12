@@ -207,19 +207,19 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
           <nav className="hidden md:flex items-center gap-6">
             <button
               onClick={() => scrollToSection("products")}
-              className="text-xs font-light tracking-[0.2em] hover:text-primary/75 transition-colors uppercase text-primary"
+              className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
             >
               Sản phẩm
             </button>
             <button
               onClick={() => navigateTo("/design-3d")}
-              className="text-xs font-light tracking-[0.2em] hover:text-primary/75 transition-colors uppercase text-primary"
+              className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
             >
               Thiết kế 3D
             </button>
             <button
               onClick={() => navigateTo("/booking")}
-              className="text-xs font-light tracking-[0.2em] hover:text-primary/75 transition-colors uppercase text-primary"
+              className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
             >
               Đặt thiết kế
             </button>
