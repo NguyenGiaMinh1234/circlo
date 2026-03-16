@@ -4,9 +4,11 @@ import Footer from "@/shared/components/Footer";
 
 const BookingPage = () => {
   return (
-    <div className="min-h-screen">
-      <Header />
-      <BookingForm />
+    <div className="min-h-screen flex flex-col">
+      <div className="page-brand-bg flex-1">
+        <Header />
+        <BookingForm />
+      </div>
       <Footer />
     </div>
   );

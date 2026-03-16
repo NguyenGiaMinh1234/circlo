@@ -4,6 +4,7 @@ import { products, type Product } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ProductPreview3D } from "@/features/design3d/components/ProductPreview3D";
+import { ROUTES } from "@/lib/routes";
 
 export default function ProductSelectPage() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function ProductSelectPage() {
   }, [selectedId]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="page-brand-bg min-h-screen flex flex-col">
       <div className="flex-1 w-full">
         <div className="h-full w-full bg-gradient-to-b from-muted/40 to-background">
           <ProductPreview3D modelPath={selectedProduct.modelPath} />
@@ -38,8 +39,8 @@ export default function ProductSelectPage() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-muted-foreground", active && "text-foreground")}>{p.icon}</span>
-                    <span className="text-sm font-medium">{p.name}</span>
+                    <span className={cn("text-white/70", active && "text-white")}>{p.icon}</span>
+                    <span className="text-sm font-medium text-white">{p.name}</span>
                   </div>
                 </button>
               );
@@ -49,7 +50,7 @@ export default function ProductSelectPage() {
 
         <Button
           className="w-full rounded-none h-14 text-base tracking-wider"
-          onClick={() => navigate(`/design-3d?product=${encodeURIComponent(selectedProduct.id)}`)}
+          onClick={() => navigate(`${ROUTES.DESIGN_3D}?product=${encodeURIComponent(selectedProduct.id)}`)}
         >
           LET'S START
         </Button>

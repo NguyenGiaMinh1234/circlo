@@ -30,8 +30,8 @@ export function BottomToolbar({
   onToolChange: (tool: DesignTool) => void;
 }) {
   return (
-    <div className="fixed bottom-3 left-1/2 z-40 -translate-x-1/2">
-      <div className="mx-auto flex items-center justify-center gap-1 rounded-full border border-border/60 bg-muted/80 px-1 py-1 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-muted/60">
+    <div className="fixed bottom-2 left-1/2 z-40 -translate-x-1/2">
+      <div className="mx-auto flex w-fit items-center justify-center gap-0.5 rounded-full border border-border/60 bg-muted/80 px-0.5 py-0.5 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-muted/60">
         {tools.map(({ tool, label, Icon }) => (
           <Button
             key={tool}
@@ -41,7 +41,7 @@ export function BottomToolbar({
             onClick={() => onToolChange(tool)}
             aria-label={label}
             className={cn(
-              "relative h-8 w-9 rounded-full transition-colors",
+              "relative h-7 w-8 rounded-full transition-colors",
               activeTool === tool
                 ? "bg-foreground text-background shadow-sm"
                 : "text-muted-foreground/70 hover:bg-background/30 hover:text-foreground"

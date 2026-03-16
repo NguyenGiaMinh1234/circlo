@@ -1,26 +1,14 @@
-import { Menu, X, LogOut, User, SlidersHorizontal, Shield } from "lucide-react";
+import { Menu, X, LogOut, User, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import logoImg from "@/assets/logo.png";
-
-const categories = [
-  { id: "bags", label: "Túi & Balo" },
-  { id: "accessories", label: "Phụ Kiện" },
-  { id: "decor", label: "Trang Trí" },
-];
+import logoImg from "../../../Logo/LOGO-01.png";
+import brandBgImg from "@/assets/backgrounds/nenweb-01.png";
+import { ROUTES } from "@/lib/routes";
 
 interface HeaderProps {
   compact?: boolean;
@@ -29,11 +17,10 @@ interface HeaderProps {
 const Header = ({ compact = false }: HeaderProps = {}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading, signOut, isAdmin, roles } = useAuthContext();
+  const { user, loading, signOut, isAdmin } = useAuthContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  const isDesign3DPage = location.pathname === "/design-3d";
+  const isDesign3DPage = location.pathname === ROUTES.DESIGN_3D;
 
   const handleLogout = async () => {
     const { error } = await signOut();
@@ -47,8 +34,12 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
   };
 
   const scrollToSection = (id: string) => {
-    if (window.location.pathname !== "/") {
-      navigate(`/#${id}`);
+    if (window.location.pathname !== ROUTES.HOME) {
+      if (id === "products") {
+        navigate(ROUTES.PRODUCTS);
+      } else {
+        navigate(ROUTES.HOME);
+      }
       return;
     }
 
@@ -64,21 +55,6 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
     setIsMenuOpen(false);
   };
 
-  const handleCategoryToggle = (categoryId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-    window.dispatchEvent(
-      new CustomEvent("categoryFilterChange", {
-        detail: selectedCategories.includes(categoryId)
-          ? selectedCategories.filter((id) => id !== categoryId)
-          : [...selectedCategories, categoryId],
-      })
-    );
-  };
-
   const getUserDisplayName = () => {
     if (!user) return "";
     return user.user_metadata?.full_name || user.email || "";
@@ -87,29 +63,34 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
   // Compact header for design-3d page
   if (compact || isDesign3DPage) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/35 bg-[linear-gradient(90deg,rgba(4,27,45,0.16),rgba(0,78,154,0.14),rgba(66,140,212,0.14),rgba(255,156,218,0.14),rgba(234,68,146,0.16))] shadow-[0_10px_30px_rgba(4,27,45,0.12)] backdrop-blur-lg supports-[backdrop-filter]:bg-[linear-gradient(90deg,rgba(4,27,45,0.12),rgba(0,78,154,0.11),rgba(66,140,212,0.12),rgba(255,156,218,0.11),rgba(234,68,146,0.12))]">
+      <header
+        className="fixed top-0 left-0 right-0 z-50 border-b border-white/35 shadow-[0_10px_30px_rgba(4,27,45,0.12)] backdrop-blur-lg"
+        style={{
+          backgroundImage: `linear-gradient(112deg,rgba(4,27,45,0.72)_0%,rgba(4,27,45,0.5)_26%,rgba(0,78,154,0.22)_48%,rgba(255,156,218,0.12)_72%,rgba(4,27,45,0.36)_100%), url(${brandBgImg})`,
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Link
                 to="/"
-                className="flex items-center space-x-3 hover:opacity-80 transition-opacity duration-300"
+                className="flex items-center hover:opacity-80 transition-opacity duration-300"
               >
                 <img
                   src={logoImg}
                   alt="Circlo Logo"
-                  className="logo-3d-pop h-28 w-28 object-contain transition-transform duration-300 hover:scale-105 md:h-32 md:w-32"
+                  className="logo-3d-pop h-28 w-28 shrink-0 scale-[1.45] object-contain transition-transform duration-300 hover:scale-[1.5] md:h-32 md:w-32 md:scale-[1.5] md:hover:scale-[1.55]"
                 />
-                <h1 className="logo-text-3d text-4xl md:text-5xl font-extrabold tracking-[0.85em] uppercase transition-transform duration-300 hover:scale-[1.03]">
-                  CIRCLO
-                </h1>
               </Link>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="text-primary hover:bg-white/35 text-xs tracking-wide rounded-xl"
+              className="text-white hover:bg-white/20 text-xs tracking-wide rounded-xl"
             >
               ← Trang chủ
             </Button>
@@ -126,81 +107,14 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/")}
-              className="flex items-center gap-4 hover:opacity-80 transition-opacity duration-300"
+              className="flex items-center hover:opacity-80 transition-opacity duration-300"
             >
               <img
                 src={logoImg}
                 alt="Circlo Logo"
-                className="logo-3d-pop h-28 w-28 object-contain transition-transform duration-300 hover:scale-105 md:h-32 md:w-32"
+                className="logo-3d-pop h-28 w-28 shrink-0 scale-[1.45] object-contain transition-transform duration-300 hover:scale-[1.5] md:h-32 md:w-32 md:scale-[1.5] md:hover:scale-[1.55]"
               />
-              <h1 className="logo-text-3d text-4xl md:text-5xl font-extrabold tracking-[0.85em] uppercase transition-transform duration-300 hover:scale-[1.03]">
-                CIRCLO
-              </h1>
             </button>
-
-            {/* Filter Button */}
-            <Drawer>
-              <DrawerTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-primary hover:bg-primary/10 relative rounded-xl"
-                >
-                  <SlidersHorizontal className="h-5 w-5" />
-                  {selectedCategories.length > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {selectedCategories.length}
-                    </span>
-                  )}
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="bg-background border-t-2">
-                <DrawerHeader>
-                  <DrawerTitle className="text-2xl font-bold tracking-wider uppercase">
-                    Lọc Sản Phẩm
-                  </DrawerTitle>
-                </DrawerHeader>
-                <div className="px-6 pb-8">
-                  <div className="space-y-4">
-                    {categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="flex items-center space-x-3 py-2"
-                      >
-                        <Checkbox
-                          id={category.id}
-                          checked={selectedCategories.includes(category.id)}
-                          onCheckedChange={() => handleCategoryToggle(category.id)}
-                          className="h-5 w-5"
-                        />
-                        <label
-                          htmlFor={category.id}
-                          className="text-lg font-medium tracking-wide cursor-pointer"
-                        >
-                          {category.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedCategories.length > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedCategories([]);
-                        window.dispatchEvent(
-                          new CustomEvent("categoryFilterChange", {
-                            detail: [],
-                          })
-                        );
-                      }}
-                      className="w-full mt-6"
-                    >
-                      Xóa Bộ Lọc
-                    </Button>
-                  )}
-                </div>
-              </DrawerContent>
-            </Drawer>
           </div>
 
           {/* Desktop Menu */}
@@ -212,13 +126,13 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
               Sản phẩm
             </button>
             <button
-              onClick={() => navigateTo("/design-3d")}
+              onClick={() => navigateTo(ROUTES.DESIGN_3D)}
               className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
             >
               Thiết kế 3D
             </button>
             <button
-              onClick={() => navigateTo("/booking")}
+              onClick={() => navigateTo(ROUTES.BOOKING)}
               className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
             >
               Đặt thiết kế
@@ -227,7 +141,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigateTo("/booking/history")}
+              onClick={() => navigateTo(ROUTES.BOOKING_HISTORY)}
               className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl"
             >
               Lịch sử đặt
@@ -241,7 +155,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigateTo("/admin")}
+                    onClick={() => navigateTo(ROUTES.ADMIN)}
                     className="border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     <Shield className="h-3.5 w-3.5 mr-2" />
@@ -249,7 +163,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                   </Button>
                 )}
                 <button
-                  onClick={() => navigateTo("/profile")}
+                  onClick={() => navigateTo(ROUTES.PROFILE)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/25 rounded-xl hover:bg-primary/20 transition-colors cursor-pointer"
                 >
                   <User className="h-3.5 w-3.5 text-primary" />
@@ -272,7 +186,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigateTo("/auth")}
+                  onClick={() => navigateTo(ROUTES.LOGIN)}
                   className="border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground tracking-[0.2em] rounded-xl"
                 >
                   Đăng nhập
@@ -280,7 +194,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => navigateTo("/auth?tab=register")}
+                  onClick={() => navigateTo(ROUTES.REGISTER)}
                   className="bg-[linear-gradient(90deg,rgba(4,27,45,0.96),rgba(0,78,154,0.94),rgba(66,140,212,0.88),rgba(234,68,146,0.9))] text-white hover:opacity-90 rounded-xl"
                 >
                   Đăng ký
@@ -309,13 +223,13 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
               Sản phẩm
             </button>
             <button
-              onClick={() => navigateTo("/design-3d")}
+              onClick={() => navigateTo(ROUTES.DESIGN_3D)}
               className="block text-sm font-light tracking-[0.2em] hover:text-primary/75 transition-colors uppercase w-full text-left text-primary"
             >
               Thiết kế 3D
             </button>
             <button
-              onClick={() => navigateTo("/booking")}
+              onClick={() => navigateTo(ROUTES.BOOKING)}
               className="block text-sm font-light tracking-[0.2em] hover:text-primary/75 transition-colors uppercase w-full text-left text-primary"
             >
               Đặt thiết kế
@@ -326,7 +240,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
             ) : user ? (
               <div className="space-y-3 pt-3 border-t border-primary/10">
                 <button
-                  onClick={() => navigateTo("/profile")}
+                  onClick={() => navigateTo(ROUTES.PROFILE)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/25 rounded-xl hover:bg-primary/20 transition-colors w-full"
                 >
                   <User className="h-4 w-4 text-primary" />
@@ -338,7 +252,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigateTo("/admin")}
+                    onClick={() => navigateTo(ROUTES.ADMIN)}
                     className="w-full border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     <Shield className="h-4 w-4 mr-2" />
@@ -360,7 +274,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigateTo("/auth")}
+                  onClick={() => navigateTo(ROUTES.LOGIN)}
                   className="w-full border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl"
                 >
                   Đăng nhập
@@ -368,7 +282,7 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => navigateTo("/auth?tab=register")}
+                  onClick={() => navigateTo(ROUTES.REGISTER)}
                   className="w-full bg-[linear-gradient(90deg,rgba(4,27,45,0.96),rgba(0,78,154,0.94),rgba(66,140,212,0.88),rgba(234,68,146,0.9))] text-white hover:opacity-90 rounded-xl"
                 >
                   Đăng ký

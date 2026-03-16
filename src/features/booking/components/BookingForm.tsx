@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ROUTES } from "@/lib/routes";
 
 const BookingForm = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ const BookingForm = () => {
 
     if (!user) {
       toast.error("Vui lòng đăng nhập để đặt thiết kế.");
-      navigate("/auth");
+      navigate(ROUTES.LOGIN);
       return;
     }
 
@@ -99,7 +100,7 @@ const BookingForm = () => {
             <h2 className="text-4xl md:text-6xl font-light tracking-wider">
               Đặt thiết kế
             </h2>
-            <p className="text-lg text-muted-foreground font-light leading-relaxed">
+            <p className="text-lg text-white font-semibold leading-relaxed">
               Điền thông tin bên dưới và chúng tôi sẽ liên hệ với bạn trong vòng 24 giờ
             </p>
           </div>

@@ -89,12 +89,7 @@ const DashboardOverview = () => {
           </Card>
         ))}
       </div>
-      <Card>
-        <CardHeader><CardTitle>Chào mừng đến Admin Dashboard</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Sử dụng các tab ở trên để quản lý đơn thiết kế, người dùng và đơn hàng.</p>
-        </CardContent>
-      </Card>
+
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/routes";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ProductCardProps {
@@ -85,7 +86,7 @@ const ProductCard = ({ title, image, description, images, isReversed = false, pr
             className="w-full bg-[linear-gradient(90deg,rgba(4,27,45,0.96),rgba(0,78,154,0.94),rgba(66,140,212,0.88),rgba(234,68,146,0.9))] text-white hover:opacity-90 font-light tracking-[0.2em] uppercase rounded-xl"
             onClick={() => {
               setOpen(false);
-              window.location.href = '/booking';
+              window.location.href = ROUTES.BOOKING;
             }}
           >
             Đặt thiết kế

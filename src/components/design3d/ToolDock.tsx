@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { DesignTool } from "@/components/design3d/BottomToolbar";
 import { AssetStrip } from "@/components/design3d/AssetStrip";
 import type { DecalInstance } from "@/types/decal";
+import { ChevronDown } from "lucide-react";
 
 function useAssetUrls(kind: "logos" | "patterns" | "stamps") {
   return useMemo(() => {
@@ -22,23 +23,19 @@ function useAssetUrls(kind: "logos" | "patterns" | "stamps") {
 
 export type PartTab = { id: string; label: string };
 
-const BASIC_COLORS = [
-  "#FFFFFF",
-  "#000000",
-  "#E11D48",
-  "#F97316",
-  "#FACC15",
-  "#65A30D",
-  "#10B981",
-  "#06B6D4",
-  "#3B82F6",
-  "#1D4ED8",
-  "#6366F1",
-  "#8B5CF6",
-  "#A855F7",
-  "#EC4899",
-  "#A3A3A3",
-  "#8B5E3C",
+const COLOR_OPTIONS = [
+  { name: "Ivory", value: "#FFFFFF" },
+  { name: "Midnight", value: "#111111" },
+  { name: "Red", value: "#EF4444" },
+  { name: "Orange", value: "#F97316" },
+  { name: "Sun", value: "#FACC15" },
+  { name: "Green", value: "#10B981" },
+  { name: "Sky", value: "#06B6D4" },
+  { name: "Blue", value: "#3B82F6" },
+  { name: "Purple", value: "#9333EA" },
+  { name: "Pink", value: "#EC4899" },
+  { name: "Stone", value: "#A3A3A3" },
+  { name: "Earth", value: "#8B5E3C" },
 ];
 
 export function ToolDock({
@@ -100,11 +97,11 @@ export function ToolDock({
   onErasePart: (partId: string) => void;
 }) {
   const [colorBurst, setColorBurst] = useState<{ color: string; id: number } | null>(null);
+  const [isColorPaletteOpen, setIsColorPaletteOpen] = useState(false);
   const logos = useAssetUrls("logos");
   const patterns = useAssetUrls("patterns");
   const stamps = useAssetUrls("stamps");
 
-  const showParts = activeTool === "logo" || activeTool === "stamp" || activeTool === "pattern" || activeTool === "brush" || activeTool === "color" || activeTool === "eraser";
   const showDock = activeTool !== "move";
   const showActiveDecalControls =
     (activeTool === "logo" || activeTool === "stamp" || activeTool === "pattern") &&
@@ -130,40 +127,28 @@ export function ToolDock({
     }, 520);
   };
 
+  const currentColorLabel = useMemo(() => {
+    const matched = COLOR_OPTIONS.find((c) => c.value.toLowerCase() === currentColor.toLowerCase());
+    return matched ? matched.name : currentColor.toUpperCase();
+  }, [currentColor]);
+
   if (!showDock) return null;
 
   return (
-    <div className="fixed bottom-[50px] left-0 right-0 z-40">
-      <div className="mx-auto max-w-[56rem] overflow-hidden rounded-xl border border-primary/10 bg-white/92 text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/80">
-        {showParts && parts.length > 0 && (
-          <div className="flex items-center justify-center gap-1.5 overflow-x-auto px-2.5 py-1.5 text-[11px]">
-            {parts.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onSelectPart(p.id)}
-                className={cn(
-                  "whitespace-nowrap rounded-full px-2.5 py-1 transition-colors",
-                  selectedPart === p.id
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="px-2.5 py-1.5">
+    <div className="fixed bottom-[42px] left-1/2 z-40 w-full -translate-x-1/2 px-2">
+      <div className="mx-auto w-fit max-w-[94vw] overflow-hidden rounded-xl border border-primary/10 bg-white/92 text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <div className="px-2 py-1">
           {(activeTool === "color") && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-[10px] font-semibold tracking-[0.18em] text-foreground/70">MÀU</div>
                 <label
-                  className="group relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border/60 shadow-[0_5px_14px_rgba(15,23,42,0.1)] transition-transform hover:scale-105"
-                  style={{ backgroundColor: currentColor }}
-                  title="Chọn màu tùy chỉnh"
+                  className="relative flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/80 shadow-[0_6px_16px_rgba(15,23,42,0.14)]"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, #ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #5856d6, #af52de, #ff2d55, #ff3b30)",
+                  }}
+                  title="Màu đa sắc"
                 >
                   <input
                     type="color"
@@ -171,12 +156,40 @@ export function ToolDock({
                     onChange={(e) => onColorChange(e.target.value)}
                     className="absolute inset-0 cursor-pointer opacity-0"
                   />
-                  <div className="pointer-events-none h-3 w-3 rounded-full border border-white/70 bg-white/20" />
+                  <span className="pointer-events-none flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/95">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full border border-black/10"
+                      style={{ backgroundColor: currentColor }}
+                    />
+                  </span>
                 </label>
               </div>
 
-              <div className="grid grid-cols-8 gap-1.5">
-                {BASIC_COLORS.map((color) => {
+              <button
+                type="button"
+                onClick={() => setIsColorPaletteOpen((prev) => !prev)}
+                className="flex w-fit items-center gap-2.5 rounded-full border border-[#e5e7eb] bg-white px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/30"
+              >
+                <span
+                  className="h-4 w-4 rounded-full border border-black/10"
+                  style={{ backgroundColor: currentColor }}
+                />
+                <span>{currentColorLabel}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-300",
+                    isColorPaletteOpen && "rotate-180"
+                  )}
+                />
+              </button>
+
+              <div
+                className={cn(
+                  "flex flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden transition-all duration-300 ease-out",
+                  isColorPaletteOpen ? "max-h-12 opacity-100 pt-1" : "max-h-0 opacity-0"
+                )}
+              >
+                {COLOR_OPTIONS.map(({ name, value: color }) => {
                   const isActive = currentColor.toLowerCase() === color.toLowerCase();
                   const showBurst = colorBurst?.color === color;
 
@@ -188,28 +201,21 @@ export function ToolDock({
                       onDragStart={handleColorDragStart(color)}
                       onClick={() => handleColorClick(color)}
                       className={cn(
-                        "relative h-7 w-7 overflow-hidden rounded-full border transition-all duration-200 hover:scale-105 active:scale-[0.96]",
+                        "relative h-[22px] w-[22px] overflow-hidden rounded-full border border-[#e5e7eb] transition-all duration-200 hover:scale-110",
                         isActive
                           ? "shadow-[0_0_0_1.5px_rgba(255,255,255,0.92),0_8px_20px_rgba(15,23,42,0.16)]"
                           : "shadow-[0_6px_16px_rgba(15,23,42,0.11)]"
                       )}
                       style={{
-                        background: `radial-gradient(circle at 30% 28%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 16%, ${color} 38%, ${color} 100%)`,
+                        background: color,
                       }}
-                      title={color}
+                      title={name}
                     >
-                      <span className="pointer-events-none absolute inset-x-[18%] top-[14%] h-[26%] rounded-full bg-white/45 blur-[1px]" />
                       {showBurst && (
-                        <>
-                          <span
-                            key={`${colorBurst?.id}-outer`}
-                            className="pointer-events-none absolute inset-[2px] rounded-full border border-white/80 opacity-70 animate-[ping_520ms_cubic-bezier(0,0,0.2,1)_1]"
-                          />
-                          <span
-                            key={`${colorBurst?.id}-inner`}
-                            className="pointer-events-none absolute inset-[18%] rounded-full bg-white/25 animate-[ping_420ms_ease-out_1]"
-                          />
-                        </>
+                        <span
+                          key={`${colorBurst?.id}-outer`}
+                          className="pointer-events-none absolute inset-[2px] rounded-full border border-white/80 opacity-70 animate-[ping_520ms_cubic-bezier(0,0,0.2,1)_1]"
+                        />
                       )}
                       {isActive && (
                         <span className="absolute inset-0 m-auto h-2 w-2 rounded-full border border-white/90 bg-black/20" />

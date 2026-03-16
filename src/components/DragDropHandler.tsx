@@ -18,8 +18,68 @@ interface DragDropHandlerProps {
 }
 
 export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop }: DragDropHandlerProps) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const isDraggingRef = useRef(false);
+
+  const inferDropTypeFromValue = (value: string): 'color' | 'pattern' | 'logo' | 'stamp' | null => {
+    const lower = value.toLowerCase();
+
+    if (lower.startsWith('#')) return 'color';
+    if (lower.includes('/logos/') || lower.includes('logo')) return 'logo';
+    if (lower.includes('/patterns/') || lower.includes('pattern')) return 'pattern';
+    if (lower.includes('/stamps/') || lower.includes('stamp')) return 'stamp';
+    if (/\.(png|jpe?g|svg|webp)(\?.*)?$/.test(lower)) return 'logo';
+
+    return null;
+  };
+
+  const getDropPayload = (event: DragEvent): { type: 'color' | 'pattern' | 'logo' | 'stamp'; value: string } | null => {
+    const dt = event.dataTransfer;
+    if (!dt) return null;
+
+    const rawType =
+      dt.getData('type') ||
+      dt.getData('application/x-design-type') ||
+      dt.getData('text/type');
+
+    const rawJson = dt.getData('application/json');
+    const rawValue =
+      dt.getData('value') ||
+      dt.getData('application/x-design-value') ||
+      dt.getData('text/plain') ||
+      dt.getData('text/uri-list');
+
+    if (rawJson) {
+      try {
+        const parsed = JSON.parse(rawJson) as { type?: string; value?: string };
+        const type = parsed?.type?.trim();
+        const value = parsed?.value?.trim();
+        if (type && value && ['color', 'pattern', 'logo', 'stamp'].includes(type)) {
+          return {
+            type: type as 'color' | 'pattern' | 'logo' | 'stamp',
+            value,
+          };
+        }
+      } catch {
+        // Ignore malformed JSON payload and continue with other formats.
+      }
+    }
+
+    const value = rawValue?.trim();
+    if (!value) return null;
+
+    const inferredType = inferDropTypeFromValue(value);
+    const candidateType = rawType?.trim() || inferredType;
+
+    if (!candidateType || !['color', 'pattern', 'logo', 'stamp'].includes(candidateType)) {
+      return null;
+    }
+
+    return {
+      type: candidateType as 'color' | 'pattern' | 'logo' | 'stamp',
+      value,
+    };
+  };
 
   useEffect(() => {
     if (!meshRef || parts.length === 0) return;
@@ -28,6 +88,9 @@ export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop 
       e.preventDefault();
       e.stopPropagation();
       isDraggingRef.current = true;
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
     };
 
     const handleDrop = (e: DragEvent) => {
@@ -35,11 +98,8 @@ export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop 
       e.stopPropagation();
       isDraggingRef.current = false;
 
-      // Get drag data
-      const dragType = e.dataTransfer?.getData('type');
-      const dragValue = e.dataTransfer?.getData('value');
-
-      if (!dragType || !dragValue) return;
+      const payload = getDropPayload(e);
+      if (!payload) return;
 
       // Calculate pointer position
       const canvas = e.currentTarget as HTMLCanvasElement;
@@ -76,20 +136,24 @@ export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop 
             : parts;
           part = findPartAtPoint(localPoint, scopedParts);
         }
+
+        // Fallback for models whose segmentation bounds do not perfectly match drop hit.
+        if (!part) {
+          part =
+            parts.find((p) => p.meshUuid === hitMesh.uuid) ||
+            (hitMesh.name ? parts.find((p) => p.name === hitMesh.name) : undefined) ||
+            undefined;
+        }
         
         if (part) {
           // Ensure type is valid
-          const validType = ['color', 'pattern', 'logo', 'stamp'].includes(dragType) 
-            ? dragType as 'color' | 'pattern' | 'logo' | 'stamp'
-            : 'pattern'; // fallback
-
           const worldNormal = hit.face?.normal
             ? hit.face.normal.clone().transformDirection(hitMesh.matrixWorld).normalize()
             : undefined;
           
           onPartDrop(part.name, {
-            type: validType,
-            value: dragValue,
+            type: payload.type,
+            value: payload.value,
             uv: hit.uv ? { u: hit.uv.x, v: hit.uv.y } : undefined,
             meshUuid: hitMesh.uuid,
             worldPoint: { x: point.x, y: point.y, z: point.z },
@@ -101,7 +165,7 @@ export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop 
       }
     };
 
-    const canvas = document.querySelector('canvas');
+    const canvas = gl.domElement;
     if (canvas) {
       canvas.addEventListener('dragover', handleDragOver);
       canvas.addEventListener('drop', handleDrop);
@@ -111,7 +175,7 @@ export default function DragDropHandler({ meshRef, allMeshes, parts, onPartDrop 
         canvas.removeEventListener('drop', handleDrop);
       };
     }
-  }, [camera, meshRef, allMeshes, parts, onPartDrop]);
+  }, [camera, gl, meshRef, allMeshes, parts, onPartDrop]);
 
   return null;
 }

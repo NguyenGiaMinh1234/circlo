@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, User, Phone, Calendar, FileText, Save } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth");
+      navigate(ROUTES.LOGIN);
       return;
     }
     if (user) {
@@ -89,28 +90,29 @@ const ProfilePage = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-brand-bg min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 flex items-start justify-center py-12 px-4 pt-44">
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold flex items-center gap-2">
-              <User className="h-6 w-6" />
-              Hồ sơ cá nhân
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Cập nhật thông tin cá nhân của bạn
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSave} className="space-y-5">
+      <div className="page-brand-bg flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-start justify-center py-12 px-4 pt-44">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold flex items-center gap-2">
+                <User className="h-6 w-6" />
+                Hồ sơ cá nhân
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Cập nhật thông tin cá nhân của bạn
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSave} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="profile-email">Email</Label>
                 <Input
@@ -187,23 +189,24 @@ const ProfilePage = () => {
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Lưu thay đổi
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
+                <Button type="submit" className="w-full" disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Lưu thay đổi
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
       <Footer />
     </div>
   );

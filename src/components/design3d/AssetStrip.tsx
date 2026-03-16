@@ -12,6 +12,20 @@ export function AssetStrip({
   onSelect: (value: string) => void;
   dragType?: 'logo' | 'stamp' | 'pattern';
 }) {
+  const handleAssetDragStart = (
+    event: React.DragEvent<HTMLButtonElement>,
+    type: 'logo' | 'stamp' | 'pattern',
+    url: string
+  ) => {
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('type', type);
+    event.dataTransfer.setData('value', url);
+    event.dataTransfer.setData('application/x-design-type', type);
+    event.dataTransfer.setData('application/x-design-value', url);
+    event.dataTransfer.setData('application/json', JSON.stringify({ type, value: url }));
+    event.dataTransfer.setData('text/plain', url);
+  };
+
   return (
     <div className="flex w-full gap-2 overflow-x-auto py-2">
       {items.map((url) => (
@@ -25,13 +39,10 @@ export function AssetStrip({
           draggable={!!dragType}
           onDragStart={(e) => {
             if (!dragType) return;
-            e.dataTransfer.effectAllowed = 'copy';
-            e.dataTransfer.setData('type', dragType);
-            e.dataTransfer.setData('value', url);
-            e.dataTransfer.setData('text/plain', url);
+            handleAssetDragStart(e, dragType, url);
           }}
         >
-          <img src={url} alt="" className="h-full w-full rounded object-contain" />
+          <img src={url} alt="" draggable={false} className="h-full w-full rounded object-contain" />
         </Button>
       ))}
     </div>

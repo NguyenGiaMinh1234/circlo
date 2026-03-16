@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ROUTES } from "@/lib/routes";
 const Index = lazy(() => import("./features/home/pages/Index"));
 const Design3DPage = lazy(() => import("./features/design3d/pages/Design3DPage"));
 const ProductSelectPage = lazy(() => import("./features/design3d/pages/ProductSelectPage"));
@@ -60,7 +61,7 @@ const DeferredChatBox = () => {
     };
   }, [shouldRender]);
 
-  if (!shouldRender || location.pathname.startsWith("/admin")) {
+  if (!shouldRender || location.pathname.startsWith(ROUTES.ADMIN)) {
     return null;
   }
 
@@ -80,14 +81,26 @@ const App = () => (
         <BrowserRouter>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/design-3d/select" element={<ProductSelectPage />} />
-              <Route path="/design-3d" element={<Design3DPage />} />
-              <Route path="/booking" element={<BookingPage />} />
-              <Route path="/booking/history" element={<HistoryPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              <Route path={ROUTES.HOME} element={<Index />} />
+              <Route path={ROUTES.PRODUCTS} element={<Index />} />
+              <Route path={ROUTES.DESIGN_3D_SELECT} element={<ProductSelectPage />} />
+              <Route path={ROUTES.DESIGN_3D} element={<Design3DPage />} />
+              <Route path={ROUTES.BOOKING} element={<BookingPage />} />
+              <Route path={ROUTES.BOOKING_HISTORY} element={<HistoryPage />} />
+              <Route path={ROUTES.LOGIN} element={<AuthPage />} />
+              <Route path={ROUTES.REGISTER} element={<AuthPage />} />
+              <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
+              <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+
+              <Route path="/design-3d/select" element={<Navigate to={ROUTES.DESIGN_3D_SELECT} replace />} />
+              <Route path="/design-3d" element={<Navigate to={ROUTES.DESIGN_3D} replace />} />
+              <Route path="/booking/history" element={<Navigate to={ROUTES.BOOKING_HISTORY} replace />} />
+              <Route path="/booking" element={<Navigate to={ROUTES.BOOKING} replace />} />
+              <Route path="/auth" element={<Navigate to={ROUTES.LOGIN} replace />} />
+              <Route path="/x-a7k9" element={<Navigate to={ROUTES.LOGIN} replace />} />
+              <Route path="/admin" element={<Navigate to={ROUTES.ADMIN} replace />} />
+              <Route path="/profile" element={<Navigate to={ROUTES.PROFILE} replace />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

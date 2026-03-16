@@ -13,7 +13,7 @@ export const useAIChat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Xin chào! Tôi là trợ lý AI của CIRCLO. Tôi có thể giúp gì cho bạn?',
+      text: '👋 Xin chào!\nTôi là trợ lý AI của Criclo.\nTôi có thể giúp gì cho bạn?',
       sender: 'bot',
       timestamp: new Date(),
     },

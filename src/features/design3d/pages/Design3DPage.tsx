@@ -7,7 +7,7 @@ const Design3DPage = () => {
   const productId = params.get("product") ?? undefined;
 
   return (
-    <div className="min-h-screen">
+    <div className="page-brand-bg min-h-screen">
       <Header compact={true} />
       <div className="pt-12">
         <Design3D initialProductId={productId} />
