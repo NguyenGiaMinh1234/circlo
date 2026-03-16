@@ -524,7 +524,7 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
         <ProductDropdown selectedProduct={selectedProduct} onProductChange={handleProductChange} />
       </div>
 
-      <div className="fixed right-4 top-28 z-50">
+      <div className="fixed right-4 top-[10.5rem] z-50">
         <ExportControls onExport={handleExport} onReset={handleReset} onSaveToCloud={handleSaveToCloud} isCloudSaving={isCloudSaving} />
       </div>
 
