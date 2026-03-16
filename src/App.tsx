@@ -88,6 +88,7 @@ const App = () => (
               <Route path={ROUTES.DESIGN_3D} element={<Design3DPage />} />
               <Route path={ROUTES.BOOKING} element={<BookingPage />} />
               <Route path={ROUTES.BOOKING_HISTORY} element={<HistoryPage />} />
+              <Route path={ROUTES.SAVED_DESIGNS} element={<SavedDesignsPage />} />
               <Route path={ROUTES.LOGIN} element={<AuthPage />} />
               <Route path={ROUTES.REGISTER} element={<AuthPage />} />
               <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
