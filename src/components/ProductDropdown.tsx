@@ -28,7 +28,7 @@ export function ProductDropdown({ selectedProduct, onProductChange, className }:
           <Button
             variant="outline"
             className={cn(
-              "h-12 px-4 gap-2 border-white/35 bg-[linear-gradient(90deg,rgba(4,27,45,0.12),rgba(0,78,154,0.14),rgba(66,140,212,0.16),rgba(255,156,218,0.14),rgba(234,68,146,0.12))] shadow-xl backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(90deg,rgba(4,27,45,0.09),rgba(0,78,154,0.1),rgba(66,140,212,0.12),rgba(255,156,218,0.1),rgba(234,68,146,0.09))]",
+              "h-12 px-4 gap-2 border-white/20 bg-[linear-gradient(90deg,rgba(4,27,45,0.75),rgba(0,78,154,0.6),rgba(66,140,212,0.5),rgba(255,156,218,0.4),rgba(234,68,146,0.5))] text-white shadow-xl backdrop-blur-xl",
               "hover:bg-white/75 hover:text-accent-foreground",
               "transition-all"
             )}
