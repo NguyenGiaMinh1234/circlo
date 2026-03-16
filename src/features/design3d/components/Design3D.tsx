@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Design3DProps = {
   initialProductId?: string;
+  loadDesignId?: string;
 };
 
-const Design3D = ({ initialProductId }: Design3DProps) => {
+const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
   const resolvedInitial = useMemo(() => {
     return products.find((p) => p.id === initialProductId) ?? products[0];
   }, [initialProductId]);
