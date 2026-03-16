@@ -16,6 +16,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const HistoryPage = lazy(() => import("./features/booking/pages/HistoryPage"));
 const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
+const SavedDesignsPage = lazy(() => import("./features/design3d/pages/SavedDesignsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
