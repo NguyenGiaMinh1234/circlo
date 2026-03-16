@@ -16,6 +16,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const HistoryPage = lazy(() => import("./features/booking/pages/HistoryPage"));
 const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
 const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
+const SavedDesignsPage = lazy(() => import("./features/design3d/pages/SavedDesignsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +88,7 @@ const App = () => (
               <Route path={ROUTES.DESIGN_3D} element={<Design3DPage />} />
               <Route path={ROUTES.BOOKING} element={<BookingPage />} />
               <Route path={ROUTES.BOOKING_HISTORY} element={<HistoryPage />} />
+              <Route path={ROUTES.SAVED_DESIGNS} element={<SavedDesignsPage />} />
               <Route path={ROUTES.LOGIN} element={<AuthPage />} />
               <Route path={ROUTES.REGISTER} element={<AuthPage />} />
               <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />

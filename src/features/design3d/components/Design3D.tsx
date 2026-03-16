@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Design3DProps = {
   initialProductId?: string;
+  loadDesignId?: string;
 };
 
-const Design3D = ({ initialProductId }: Design3DProps) => {
+const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
   const resolvedInitial = useMemo(() => {
     return products.find((p) => p.id === initialProductId) ?? products[0];
   }, [initialProductId]);
@@ -93,6 +94,40 @@ const Design3D = ({ initialProductId }: Design3DProps) => {
     if (!resolvedInitial) return;
     handleProductChange(resolvedInitial);
   }, [handleProductChange, resolvedInitial]);
+
+  // Load saved design from cloud
+  useEffect(() => {
+    if (!loadDesignId) return;
+    const loadDesign = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("saved_designs")
+          .select("design_data, product_id")
+          .eq("id", loadDesignId)
+          .single();
+        if (error || !data) return;
+
+        const dd = data.design_data as any;
+        if (!dd) return;
+
+        // Set product if needed
+        if (data.product_id) {
+          const p = products.find((pr) => pr.id === data.product_id);
+          if (p) setSelectedProduct(p);
+        }
+
+        if (dd.partColors) setPartColors(dd.partColors);
+        if (dd.partTextures) setPartTextures(dd.partTextures);
+        if (dd.partTextureAnchors) setPartTextureAnchors(dd.partTextureAnchors);
+        if (dd.decals) setDecals(dd.decals);
+
+        toast.success("Đã tải thiết kế");
+      } catch {
+        toast.error("Không thể tải thiết kế");
+      }
+    };
+    loadDesign();
+  }, [loadDesignId]);
 
   const handlePartsDiscovered = useCallback((parts: string[]) => {
     setDiscoveredParts(parts);
@@ -374,12 +409,7 @@ const Design3D = ({ initialProductId }: Design3DProps) => {
   const handleSaveToCloud = useCallback(async () => {
     const canvas = canvasRef.current?.querySelector("canvas");
     if (!canvas) {
-      toast.error("Canvas not found", { description: "Nothing to save" });
-      return;
-    }
-
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
-      toast.error("Supabase is not configured", { description: "Missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY" });
+      toast.error("Canvas không tìm thấy");
       return;
     }
 
@@ -389,45 +419,60 @@ const Design3D = ({ initialProductId }: Design3DProps) => {
       if (userErr) throw userErr;
       const userId = userData.user?.id;
       if (!userId) {
-        toast.error("Please sign in", { description: "You need to be logged in to save to cloud" });
+        toast.error("Vui lòng đăng nhập", { description: "Bạn cần đăng nhập để lưu thiết kế" });
         return;
       }
 
+      // 1. Upload thumbnail
       const blob: Blob | null = await new Promise((resolve) => {
         canvas.toBlob((b) => resolve(b), "image/png");
       });
-      if (!blob) {
-        toast.error("Failed to create image");
-        return;
+
+      let thumbnailUrl: string | null = null;
+      if (blob) {
+        const fileName = `${userId}/thumb-${selectedProduct.id}-${Date.now()}.png`;
+        const { error: uploadErr } = await supabase.storage
+          .from("design-images")
+          .upload(fileName, blob, { contentType: "image/png", upsert: true });
+        if (!uploadErr) {
+          const { data: pubUrl } = supabase.storage
+            .from("design-images")
+            .getPublicUrl(fileName);
+          thumbnailUrl = pubUrl?.publicUrl ?? null;
+        }
       }
 
-      const bucket = (import.meta.env.VITE_SUPABASE_DESIGN_BUCKET as string | undefined) ?? "designs";
-      const fileName = `design-${selectedProduct.id}-${Date.now()}.png`;
-      const path = `${userId}/${fileName}`;
+      // 2. Save design data to saved_designs table
+      const designData = {
+        productId: selectedProduct.id,
+        partColors,
+        partTextures,
+        partTextureAnchors,
+        decals,
+      };
 
-      const { error: uploadErr } = await supabase.storage
-        .from(bucket)
-        .upload(path, blob, { contentType: "image/png", upsert: true });
-      if (uploadErr) throw uploadErr;
+      const designName = `${selectedProduct.name} - ${new Date().toLocaleString("vi-VN")}`;
 
-      const { data: signed, error: signedErr } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(path, 60 * 60);
-      if (signedErr) throw signedErr;
+      const { error: insertErr } = await supabase
+        .from("saved_designs")
+        .insert({
+          user_id: userId,
+          name: designName,
+          product_id: selectedProduct.id,
+          design_data: designData as any,
+          thumbnail_url: thumbnailUrl,
+        });
 
-      toast.success("Saved to cloud", {
-        description: signed?.signedUrl ? "A download link was created (valid for 1 hour)" : undefined,
-      });
-      if (signed?.signedUrl) {
-        window.open(signed.signedUrl, "_blank", "noopener,noreferrer");
-      }
+      if (insertErr) throw insertErr;
+
+      toast.success("Đã lưu thiết kế!", { description: "Thiết kế đã được lưu vào bộ sưu tập của bạn" });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Cloud save failed";
-      toast.error("Cloud save failed", { description: msg });
+      const msg = e instanceof Error ? e.message : "Lưu thất bại";
+      toast.error("Lưu thất bại", { description: msg });
     } finally {
       setIsCloudSaving(false);
     }
-  }, [selectedProduct.id]);
+  }, [selectedProduct, partColors, partTextures, partTextureAnchors, decals]);
 
   const handleReset = useCallback(() => {
     setSelectedPart(null);

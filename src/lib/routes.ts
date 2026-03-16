@@ -7,6 +7,7 @@ export const ROUTES = {
   DESIGN_3D_SELECT: "/x-s1w4",
   BOOKING: "/x-b8n3",
   BOOKING_HISTORY: "/x-h2t6",
+  SAVED_DESIGNS: "/x-g3k8",
   ADMIN: "/x-m9q2",
   PROFILE: "/x-p4r1",
 } as const;

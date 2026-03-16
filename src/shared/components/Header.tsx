@@ -137,6 +137,12 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
             >
               Đặt thiết kế
             </button>
+            <button
+              onClick={() => navigateTo(ROUTES.SAVED_DESIGNS)}
+              className="text-xs font-bold tracking-[0.2em] text-white hover:text-white/80 transition-colors uppercase"
+            >
+              Bộ sưu tập
+            </button>
 
             <Button
               variant="outline"
