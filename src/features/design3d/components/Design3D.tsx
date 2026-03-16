@@ -95,6 +95,40 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
     handleProductChange(resolvedInitial);
   }, [handleProductChange, resolvedInitial]);
 
+  // Load saved design from cloud
+  useEffect(() => {
+    if (!loadDesignId) return;
+    const loadDesign = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("saved_designs")
+          .select("design_data, product_id")
+          .eq("id", loadDesignId)
+          .single();
+        if (error || !data) return;
+
+        const dd = data.design_data as any;
+        if (!dd) return;
+
+        // Set product if needed
+        if (data.product_id) {
+          const p = products.find((pr) => pr.id === data.product_id);
+          if (p) setSelectedProduct(p);
+        }
+
+        if (dd.partColors) setPartColors(dd.partColors);
+        if (dd.partTextures) setPartTextures(dd.partTextures);
+        if (dd.partTextureAnchors) setPartTextureAnchors(dd.partTextureAnchors);
+        if (dd.decals) setDecals(dd.decals);
+
+        toast.success("Đã tải thiết kế");
+      } catch {
+        toast.error("Không thể tải thiết kế");
+      }
+    };
+    loadDesign();
+  }, [loadDesignId]);
+
   const handlePartsDiscovered = useCallback((parts: string[]) => {
     setDiscoveredParts(parts);
   }, []);
