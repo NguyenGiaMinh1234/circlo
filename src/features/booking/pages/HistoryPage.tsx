@@ -119,7 +119,6 @@ const HistoryPage = () => {
               </div>
             )}
           </div>
-        </div>
         </main>
       </div>
 
