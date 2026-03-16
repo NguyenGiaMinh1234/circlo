@@ -64,9 +64,9 @@ const Header = ({ compact = false }: HeaderProps = {}) => {
   if (compact || isDesign3DPage) {
     return (
       <header
-        className="fixed top-0 left-0 right-0 z-50 border-b border-white/35 shadow-[0_10px_30px_rgba(4,27,45,0.12)] backdrop-blur-lg"
+        className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 shadow-[0_10px_30px_rgba(4,27,45,0.18)] backdrop-blur-md"
         style={{
-          backgroundImage: `linear-gradient(112deg,rgba(4,27,45,0.72)_0%,rgba(4,27,45,0.5)_26%,rgba(0,78,154,0.22)_48%,rgba(255,156,218,0.12)_72%,rgba(4,27,45,0.36)_100%), url(${brandBgImg})`,
+          backgroundImage: `linear-gradient(112deg,rgba(4,27,45,0.92) 0%,rgba(4,27,45,0.78) 26%,rgba(0,78,154,0.55) 48%,rgba(255,156,218,0.25) 72%,rgba(4,27,45,0.65) 100%), url(${brandBgImg})`,
           backgroundPosition: "center",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
