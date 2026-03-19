@@ -101,7 +101,7 @@ const SavedDesignsPage = () => {
                   Bạn chưa có thiết kế nào được lưu.
                 </p>
                 <Button
-                  onClick={() => navigate(ROUTES.DESIGN_3D_SELECT)}
+                  onClick={() => navigate(ROUTES.DESIGN_3D)}
                   className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
                 >
                   Bắt đầu thiết kế

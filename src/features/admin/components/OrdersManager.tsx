@@ -16,15 +16,19 @@ interface OrderWithProfile {
   id: string;
   user_id: string;
   product_name: string;
-  quantity: number;
-  total_price: number | null;
+  quantity?: number;
+  total_price?: number | null;
   status: string;
-  shipping_address: string | null;
-  notes: string | null;
+  shipping_address?: string | null;
+  notes?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  type?: "order" | "design";
   created_at: string;
   profiles: {
     full_name: string | null;
     phone: string | null;
+    avatar_url?: string | null;
   } | null;
 }
 
@@ -33,7 +37,8 @@ const statusConfig: Record<string, { label: string; variant: "default" | "destru
   confirmed: { label: "Đã xác nhận", variant: "secondary" },
   processing: { label: "Đang xử lý", variant: "secondary" },
   shipped: { label: "Đang giao", variant: "secondary" },
-  delivered: { label: "Đã giao", variant: "default" },
+  delivered: { label: "Hoàn tất", variant: "default" },
+  completed: { label: "Hoàn tất", variant: "default" },
   cancelled: { label: "Đã hủy", variant: "destructive" },
 };
 
@@ -45,34 +50,65 @@ const OrdersManager = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch from orders table
+      let ordersData: any[] = [];
+      const { data: ordersRaw, error: ordersError } = await supabase
         .from("orders")
-        .select("*, profiles!orders_user_id_fkey(full_name, phone)")
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        // Fallback: fetch separately
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("orders")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (fallbackError) throw fallbackError;
-
-        const userIds = [...new Set((fallbackData || []).map((o: any) => o.user_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, phone")
-          .in("id", userIds);
-
-        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
-        const merged = (fallbackData || []).map((o: any) => ({
-          ...o,
-          profiles: profileMap.get(o.user_id) || null,
-        }));
-        setOrders(merged);
-        return;
+      if (!ordersError && ordersRaw) {
+        // Fetch profiles separately for orders
+        const orderUserIds = [...new Set((ordersRaw || []).map((o: any) => o.user_id))];
+        if (orderUserIds.length > 0) {
+          const { data: orderProfiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, phone")
+            .in("id", orderUserIds);
+          const orderProfileMap = new Map((orderProfiles || []).map((p: any) => [p.id, p]));
+          ordersData = (ordersRaw || []).map((o: any) => ({
+            ...o,
+            profiles: orderProfileMap.get(o.user_id) || null,
+            type: "order",
+          }));
+        }
       }
-      setOrders((data as any[]) || []);
+
+      // Fetch completed design bookings from design_bookings table
+      let bookingsData: any[] = [];
+      const { data: bookingsRaw, error: bookingsError } = await supabase
+        .from("design_bookings")
+        .select("*")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false });
+
+      if (!bookingsError && bookingsRaw) {
+        // Fetch profiles separately for bookings
+        const bookingUserIds = [...new Set((bookingsRaw || []).map((b: any) => b.user_id))];
+        if (bookingUserIds.length > 0) {
+          const { data: bookingProfiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, phone, avatar_url")
+            .in("id", bookingUserIds);
+          const bookingProfileMap = new Map((bookingProfiles || []).map((p: any) => [p.id, p]));
+          bookingsData = (bookingsRaw || []).map((b: any) => ({
+            ...b,
+            quantity: 1,
+            total_price: null,
+            shipping_address: null,
+            notes: null,
+            profiles: bookingProfileMap.get(b.user_id) || null,
+            type: "design",
+          }));
+        }
+      }
+
+      // Merge and sort
+      const allOrders = [...ordersData, ...bookingsData].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      setOrders(allOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
       toast({ title: "Lỗi", description: "Không thể tải danh sách đơn hàng", variant: "destructive" });
@@ -83,10 +119,11 @@ const OrdersManager = () => {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (orderId: string, newStatus: string, type: string = "order") => {
     setUpdatingId(orderId);
     try {
-      const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+      const table = type === "design" ? "design_bookings" : "orders";
+      const { error } = await supabase.from(table).update({ status: newStatus }).eq("id", orderId);
       if (error) throw error;
       toast({ title: "Thành công", description: `Đã cập nhật: ${statusConfig[newStatus]?.label || newStatus}` });
       fetchOrders();
@@ -116,7 +153,6 @@ const OrdersManager = () => {
                     <TableHead>Khách hàng</TableHead>
                     <TableHead>Sản phẩm</TableHead>
                     <TableHead>SL</TableHead>
-                    <TableHead>Tổng tiền</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Ngày tạo</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
@@ -127,8 +163,7 @@ const OrdersManager = () => {
                     <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedOrder(order)}>
                       <TableCell className="font-medium">{order.profiles?.full_name || "Chưa cập nhật"}</TableCell>
                       <TableCell>{order.product_name}</TableCell>
-                      <TableCell>{order.quantity}</TableCell>
-                      <TableCell className="font-medium">{(order.total_price || 0).toLocaleString("vi-VN")}đ</TableCell>
+                      <TableCell>{order.quantity || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={statusConfig[order.status]?.variant || "outline"}>
                           {statusConfig[order.status]?.label || order.status}
@@ -142,16 +177,16 @@ const OrdersManager = () => {
                           </Button>
                           {order.status === "pending" && (
                             <>
-                              <Button size="sm" variant="outline" className="h-8 text-green-600 border-green-200 hover:bg-green-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "confirmed")}>
+                              <Button size="sm" variant="outline" className="h-8 text-green-600 border-green-200 hover:bg-green-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "confirmed", order.type)}>
                                 {updatingId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                               </Button>
-                              <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "cancelled")}>
+                              <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "cancelled", order.type)}>
                                 <X className="h-3.5 w-3.5" />
                               </Button>
                             </>
                           )}
                           {(order.status === "confirmed" || order.status === "processing") && (
-                            <Button size="sm" variant="outline" className="h-8 text-emerald-600 border-emerald-200 hover:bg-emerald-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "delivered")}>
+                            <Button size="sm" variant="outline" className="h-8 text-emerald-600 border-emerald-200 hover:bg-emerald-50" disabled={updatingId === order.id} onClick={() => handleStatusChange(order.id, "completed", order.type)}>
                               {updatingId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
                             </Button>
                           )}
@@ -228,16 +263,16 @@ const OrdersManager = () => {
               <div className="flex gap-2 pt-2 border-t">
                 {selectedOrder.status === "pending" && (
                   <>
-                    <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "confirmed"); setSelectedOrder(null); }}>
+                    <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "confirmed", selectedOrder.type); setSelectedOrder(null); }}>
                       <Check className="h-4 w-4 mr-2" /> Xác nhận
                     </Button>
-                    <Button variant="destructive" className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "cancelled"); setSelectedOrder(null); }}>
+                    <Button variant="destructive" className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "cancelled", selectedOrder.type); setSelectedOrder(null); }}>
                       <X className="h-4 w-4 mr-2" /> Hủy đơn
                     </Button>
                   </>
                 )}
                 {(selectedOrder.status === "confirmed" || selectedOrder.status === "processing") && (
-                  <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "delivered"); setSelectedOrder(null); }}>
+                  <Button className="flex-1" onClick={() => { handleStatusChange(selectedOrder.id, "completed", selectedOrder.type); setSelectedOrder(null); }}>
                     <CheckCircle className="h-4 w-4 mr-2" /> Hoàn tất giao hàng
                   </Button>
                 )}
