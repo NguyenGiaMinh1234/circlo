@@ -206,7 +206,7 @@ export default function PresetLibrary({
                   }
                 }}
                 min={0.1}
-                max={2.0}
+                max={Math.max(2.0, localSize * 3)}
                 step={0.1}
                 className="flex-1"
               />
@@ -215,7 +215,7 @@ export default function PresetLibrary({
                 variant="outline"
                 className="h-8 w-8 p-0"
                 onClick={() => {
-                  const newSize = Math.min(2.0, localSize + 0.1);
+                  const newSize = localSize + 0.1;
                   setLocalSize(newSize);
                   if (onSizeChange && selectedPart) {
                     onSizeChange(selectedPart, newSize);

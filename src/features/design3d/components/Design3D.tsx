@@ -55,6 +55,14 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
 
   const [isCloudSaving, setIsCloudSaving] = useState<boolean>(false);
 
+  const toMeshScopedKey = useCallback((partName: string, meshUuid?: string) => {
+    return meshUuid ? `${partName}::${meshUuid}` : partName;
+  }, []);
+
+  const getDefaultDecalSize = useCallback(() => {
+    return selectedProduct.id === 'wallet' ? 0.8 : 0.5;
+  }, [selectedProduct.id]);
+
   const degToRad = useCallback((deg: number) => (deg * Math.PI) / 180, []);
   const radToDeg = useCallback((rad: number) => (rad * 180) / Math.PI, []);
 
@@ -158,12 +166,16 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
       return `Bộ Phận ${m[1]}`;
     }
 
-    // 3. Humanize raw mesh names if they leak to the UI
-    if (/^[a-z]+\d+_/i.test(trimmed) || trimmed.includes("lambert")) {
-      return "Bộ Phận Mô Hình";
-    }
+    // 3. Fallback: keep names distinct for newly updated models.
+    const cleaned = trimmed
+      .replace(/_lambert\d*(_\d+)?$/i, "")
+      .replace(/_material\d*(_\d+)?$/i, "")
+      .replace(/\b(mesh|object)\b/gi, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    return toTitleCase(trimmed);
+    return toTitleCase(cleaned || trimmed);
   }, [selectedProduct.partLabels]);
 
   const handlePartClick = useCallback((partName: string) => {
@@ -269,7 +281,8 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
         ? globalThis.crypto.randomUUID()
         : `decal_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-      const anchor = partTextureAnchors[selectedPart];
+      const anchor = partTextureAnchors[selectedPart]
+        || Object.entries(partTextureAnchors).find(([key]) => key.startsWith(`${selectedPart}::`))?.[1];
 
       const newDecal: DecalInstance = {
         id,
@@ -279,7 +292,7 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
         meshUuid: anchor?.meshUuid,
         position: anchor?.position,
         normal: anchor?.normal,
-        size: 0.5,
+        size: getDefaultDecalSize(),
         rotation: type === 'pattern' ? degToRad(patternRotation) : 0,
         flipX: false,
         flipY: false,
@@ -289,7 +302,7 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
       setDecals((prev) => [...prev, newDecal]);
       setActiveDecalId(id);
     },
-    [currentColor, degToRad, partTextureAnchors, patternRotation, selectedPart]
+    [currentColor, degToRad, getDefaultDecalSize, partTextureAnchors, patternRotation, selectedPart]
   );
 
   const handleDecalCreate = useCallback((decal: DecalInstance) => {
@@ -310,18 +323,24 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
       }
     ) => {
       setSelectedPart(partName);
+      const scopedKey = toMeshScopedKey(partName, data.meshUuid);
 
       if (data.type === "color") {
-        setPartColors((prev) => ({ ...prev, [partName]: data.value }));
+        setPartColors((prev) => ({ ...prev, [scopedKey]: data.value, [partName]: data.value }));
         return;
       }
 
       // Keep a marker per-part (optional) so the part list shows “has texture”
-      setPartTextures((prev) => ({ ...prev, [partName]: data.value }));
+      setPartTextures((prev) => ({ ...prev, [scopedKey]: data.value, [partName]: data.value }));
 
       if (data.worldPoint) {
         setPartTextureAnchors((prev) => ({
           ...prev,
+          [scopedKey]: {
+            position: data.worldPoint,
+            normal: data.worldNormal,
+            meshUuid: data.meshUuid,
+          },
           [partName]: {
             position: data.worldPoint,
             normal: data.worldNormal,
@@ -342,7 +361,7 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
         meshUuid: data.meshUuid,
         position: data.worldPoint,
         normal: data.worldNormal,
-        size: 0.5,
+        size: getDefaultDecalSize(),
         rotation: data.type === 'pattern' ? degToRad(patternRotation) : 0,
         flipX: false,
         flipY: false,
@@ -353,7 +372,7 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
       setActiveDecalId(id);
       toast.success("Sticker added", { description: "You can stack multiple decals" });
     },
-    [currentColor, degToRad, patternRotation]
+    [currentColor, degToRad, getDefaultDecalSize, patternRotation, toMeshScopedKey]
   );
 
   const handleEraseAllDesign = useCallback(() => {
@@ -367,19 +386,31 @@ const Design3D = ({ initialProductId, loadDesignId }: Design3DProps) => {
   const handleErasePartDesign = useCallback((partName: string) => {
     setPartColors((prev) => {
       const next = { ...prev };
-      delete next[partName];
+      Object.keys(next).forEach((key) => {
+        if (key === partName || key.startsWith(`${partName}::`)) {
+          delete next[key];
+        }
+      });
       return next;
     });
 
     setPartTextures((prev) => {
       const next = { ...prev };
-      delete next[partName];
+      Object.keys(next).forEach((key) => {
+        if (key === partName || key.startsWith(`${partName}::`)) {
+          delete next[key];
+        }
+      });
       return next;
     });
 
     setPartTextureAnchors((prev) => {
       const next = { ...prev };
-      delete next[partName];
+      Object.keys(next).forEach((key) => {
+        if (key === partName || key.startsWith(`${partName}::`)) {
+          delete next[key];
+        }
+      });
       return next;
     });
 

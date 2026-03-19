@@ -14,7 +14,7 @@ export const products: Product[] = [
   {
     id: "wallet",
     name: "Ví",
-    modelPath: "/models/vi.glb",
+    modelPath: "/models/Vi2.glb",
     icon: <Wallet className="w-4 h-4" />,
     partLabels: {
       "pCube1_lambert3_0": "Mặt trước",
@@ -22,7 +22,6 @@ export const products: Product[] = [
       "pCube3_lambert3_0": "Ngăn thẻ trái",
       "pCube4_lambert3_0": "Ngăn thẻ phải",
       "pCube5_lambert3_0": "Gáy ví",
-      "pCylinder1_lambert3_0": "Nút bấm",
     },
   },
   {

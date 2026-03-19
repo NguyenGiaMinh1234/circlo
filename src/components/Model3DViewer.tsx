@@ -75,6 +75,23 @@ interface Model3DViewerProps {
   onDraggingDecalChange?: (isDragging: boolean) => void;
 }
 
+const WALLET_DESIGNABLE_MESHES = new Set<string>([
+  'pCube1_lambert3_0',
+  'pCube2_lambert3_0',
+  'pCube3_lambert3_0',
+  'pCube4_lambert3_0',
+  'pCube5_lambert3_0',
+]);
+
+const WALLET_MESH_LABELS: Record<string, string> = {
+  pCube1_lambert3_0: 'Mặt trước',
+  pCube2_lambert3_0: 'Mặt sau',
+  pCube3_lambert3_0: 'Ngăn thẻ trái',
+  pCube4_lambert3_0: 'Ngăn thẻ phải',
+  pCube5_lambert3_0: 'Gáy ví',
+  pCylinder1_lambert3_0: 'Nút bấm',
+};
+
 function Model({ 
   modelPath,
   productType,
@@ -130,6 +147,103 @@ function Model({
   const lastPaintPointRef = useRef<THREE.Vector3 | null>(null);
   const lastPaintAtRef = useRef<number>(0);
 
+  const normalizePartKey = (value: string | null | undefined): string => {
+    return (value ?? '').trim().toLowerCase();
+  };
+
+  const resolveOwningMeshForHit = (hitMesh: THREE.Mesh): THREE.Mesh => {
+    const scopedMeshUuids = new Set(parts.filter((part) => !!part.meshUuid).map((part) => part.meshUuid as string));
+    if (scopedMeshUuids.size === 0) return hitMesh;
+
+    let current: THREE.Object3D | null = hitMesh;
+    while (current) {
+      if (current instanceof THREE.Mesh && scopedMeshUuids.has(current.uuid)) {
+        return current;
+      }
+      current = current.parent;
+    }
+
+    return hitMesh;
+  };
+
+  const resolvePartFromHitMesh = (hitMesh: THREE.Mesh, worldPoint: THREE.Vector3): MeshPart | null => {
+    const owningMesh = resolveOwningMeshForHit(hitMesh);
+    const hasScopedParts = parts.some((part) => !!part.meshUuid);
+    const localPoint = owningMesh.worldToLocal(worldPoint.clone());
+
+    if (hasScopedParts) {
+      const exactScoped = parts.filter((part) => part.meshUuid === owningMesh.uuid);
+      if (exactScoped.length === 1) {
+        return exactScoped[0];
+      }
+      if (exactScoped.length > 1) {
+        const byBounds = findPartAtPoint(localPoint, exactScoped);
+        if (byBounds) return byBounds;
+
+        const byName = exactScoped.find((part) => normalizePartKey(part.name) === normalizePartKey(owningMesh.name));
+        if (byName) return byName;
+
+        return exactScoped[0];
+      }
+
+      // When parts are mesh-scoped, never fall through to cross-mesh resolution.
+      return null;
+    }
+
+    if (owningMesh.name) {
+      const byName = parts.find((part) => {
+        if (normalizePartKey(part.name) !== normalizePartKey(owningMesh.name)) return false;
+        if (!hasScopedParts) return true;
+        return !part.meshUuid || part.meshUuid === owningMesh.uuid;
+      });
+      if (byName) return byName;
+    }
+
+    const scopedParts = hasScopedParts
+      ? parts.filter((part) => !part.meshUuid || part.meshUuid === owningMesh.uuid)
+      : parts;
+
+    return findPartAtPoint(localPoint, scopedParts);
+  };
+
+  const resolveSurfacePlacementForPart = (
+    part: MeshPart,
+    targetMesh: THREE.Mesh
+  ): { position: THREE.Vector3; normal: THREE.Vector3 } => {
+    const centerWorld = targetMesh.localToWorld(part.center.clone());
+    const toCamera = camera.position.clone().sub(centerWorld).normalize();
+    const rayOrigin = centerWorld.clone().addScaledVector(toCamera, 3);
+    const rayDirection = centerWorld.clone().sub(rayOrigin).normalize();
+
+    const raycaster = new THREE.Raycaster(rayOrigin, rayDirection);
+    const hits = raycaster.intersectObject(targetMesh, true);
+
+    if (hits.length > 0) {
+      const hit = hits[0];
+      const hitMesh = hit.object as THREE.Mesh;
+      let worldNormal = toCamera.clone().negate();
+      if (hit.face?.normal) {
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(hitMesh.matrixWorld);
+        worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+      }
+
+      if (worldNormal.dot(toCamera) > 0) {
+        worldNormal.negate();
+      }
+
+      return {
+        position: hit.point.clone().addScaledVector(worldNormal, 0.002),
+        normal: worldNormal,
+      };
+    }
+
+    const fallbackNormal = toCamera.clone().negate();
+    return {
+      position: centerWorld.clone().addScaledVector(fallbackNormal, 0.002),
+      normal: fallbackNormal,
+    };
+  };
+
   const getCircleDataUrl = (hex: string): string => {
     const key = `circle:${hex}`;
     const cached = paintTextureCacheRef.current.get(key);
@@ -172,6 +286,22 @@ function Model({
     }
 
     (mesh.userData as Record<string, unknown>)[flag] = true;
+  };
+
+  const ensureMaterialBaseColor = (material: THREE.MeshStandardMaterial) => {
+    const data = material.userData as { __baseColorHex?: number };
+    if (typeof data.__baseColorHex !== 'number') {
+      data.__baseColorHex = material.color.getHex();
+    }
+  };
+
+  const getMaterialBaseColor = (material: THREE.MeshStandardMaterial): THREE.Color => {
+    const data = material.userData as { __baseColorHex?: number };
+    if (typeof data.__baseColorHex === 'number') {
+      return new THREE.Color(data.__baseColorHex);
+    }
+
+    return material.color.clone();
   };
 
   // Initialize parts using intelligent segmentation
@@ -241,9 +371,40 @@ function Model({
     if (hasMultipleMeshes && hasNamedMeshes) {
       // Create parts from individual meshes
       const createdParts: MeshPart[] = [];
+      const pickableMeshes: THREE.Mesh[] = [];
+
+      const meshStats = meshes
+        .filter((mesh) => !!mesh.geometry?.attributes?.position)
+        .map((mesh) => {
+          if (!mesh.geometry.boundingBox) {
+            mesh.geometry.computeBoundingBox();
+          }
+
+          const bounds = mesh.geometry.boundingBox!.clone();
+          const size = new THREE.Vector3();
+          bounds.getSize(size);
+          const volume = Math.max(0, size.x * size.y * size.z);
+          const vertexCount = mesh.geometry.attributes.position.count;
+
+          return {
+            mesh,
+            bounds,
+            volume,
+            vertexCount,
+          };
+        });
+
+      const isWalletAccessoryMesh = (meshName: string): boolean => {
+        if (productType !== 'wallet') return false;
+        return !WALLET_DESIGNABLE_MESHES.has(meshName);
+      };
       
-      meshes.forEach((mesh, index) => {
+      meshStats.forEach(({ mesh, bounds, volume }, index) => {
         if (!mesh.geometry.attributes.position) return;
+
+        const rawMeshName = (mesh.name || '').trim();
+        const isAccessory = isWalletAccessoryMesh(rawMeshName);
+        mesh.userData.__designPickable = !isAccessory;
         
         // Include all meshes including mesh 10 (index 9) - make visible and configure
         mesh.visible = true;
@@ -258,27 +419,12 @@ function Model({
         
         materials.forEach(material => {
           if (material instanceof THREE.MeshStandardMaterial) {
+            ensureMaterialBaseColor(material);
             // Don't enable vertexColors until we have color attribute
             // It will be enabled when colors are applied
             material.metalness = 0.05;
             material.roughness = 0.85;
             material.side = THREE.DoubleSide;
-            // Keep wallet base pure white for easier preview
-            material.color.set(productType === 'wallet' ? 0xffffff : 0xFDF8F2);
-            if (productType === 'wallet') {
-              material.map = null;
-              material.alphaMap = null;
-              material.emissiveMap = null;
-              material.roughnessMap = null;
-              material.metalnessMap = null;
-              material.normalMap = null;
-              material.aoMap = null;
-              material.emissive.set(0x000000);
-              material.transparent = false;
-              material.opacity = 1;
-              material.alphaTest = 0;
-              material.depthWrite = true;
-            }
             material.needsUpdate = true;
           }
         });
@@ -294,24 +440,18 @@ function Model({
         }
         
         // Calculate bounds and center
-        const bounds = new THREE.Box3();
         const center = new THREE.Vector3();
-        
-        if (!mesh.geometry.boundingBox) {
-          mesh.geometry.computeBoundingBox();
-        }
-        
-        bounds.copy(mesh.geometry.boundingBox!);
+
         bounds.getCenter(center);
         
-        const size = new THREE.Vector3();
-        bounds.getSize(size);
-        const volume = size.x * size.y * size.z;
-        
-        // Use mesh name or generate one
-        const partName = mesh.name && mesh.name.trim() !== '' 
-          ? mesh.name 
+        // Keep part keys consistent with mesh names so new models are auto-supported.
+        const partName = rawMeshName !== ''
+          ? (productType === 'wallet' ? WALLET_MESH_LABELS[rawMeshName] || rawMeshName : rawMeshName)
           : `Bộ phận ${index + 1}`;
+
+        if (isAccessory) {
+          return;
+        }
         
         createdParts.push({
           name: partName,
@@ -321,6 +461,8 @@ function Model({
           volume,
           meshUuid: mesh.uuid
         });
+
+        pickableMeshes.push(mesh);
       });
       
       // Use the largest mesh as main mesh for rendering
@@ -331,7 +473,7 @@ function Model({
       }, meshes[0]);
       
       setMeshRef(mainMesh);
-      setAllMeshes(meshes); // Store all meshes
+      setAllMeshes(pickableMeshes.length > 0 ? pickableMeshes : meshes);
       setParts(createdParts);
       
       // Initialize systems
@@ -374,27 +516,12 @@ function Model({
     
     materials.forEach(material => {
       if (material instanceof THREE.MeshStandardMaterial) {
+        ensureMaterialBaseColor(material);
         // Don't enable vertexColors until we have color attribute
         // It will be enabled when colors are applied
         material.metalness = 0.05;
         material.roughness = 0.85;
         material.side = THREE.DoubleSide; // Render both sides
-        // Keep wallet base pure white for easier preview
-        material.color.set(productType === 'wallet' ? 0xffffff : 0xFDF8F2);
-        if (productType === 'wallet') {
-          material.map = null;
-          material.alphaMap = null;
-          material.emissiveMap = null;
-          material.roughnessMap = null;
-          material.metalnessMap = null;
-          material.normalMap = null;
-          material.aoMap = null;
-          material.emissive.set(0x000000);
-          material.transparent = false;
-          material.opacity = 1;
-          material.alphaTest = 0;
-          material.depthWrite = true;
-        }
         material.needsUpdate = true;
       }
     });
@@ -436,7 +563,9 @@ function Model({
     if (allMeshes.length === 0) return;
 
     allMeshes.forEach(mesh => {
-      const partName = mesh.name;
+      const partName =
+        parts.find((part) => part.meshUuid === mesh.uuid)?.name ||
+        mesh.name;
       if (!partName) return;
       
       // Apply visibility
@@ -453,11 +582,14 @@ function Model({
         material.needsUpdate = true;
       }
     });
-  }, [allMeshes, visibleParts, partOpacities]);
+  }, [allMeshes, visibleParts, partOpacities, parts]);
 
   // Apply colors to parts
   useEffect(() => {
     if (!meshRef || parts.length === 0) return;
+
+      const hasExplicitPartColors = Object.keys(partColors).length > 0;
+      const shouldUseVertexColors = hasExplicitPartColors || !!selectedPart;
 
       // Get all meshes in scene (for multi-mesh models) - use cached allMeshes state
       const allMeshesToUse = allMeshes.length > 0 ? allMeshes : (() => {
@@ -483,9 +615,22 @@ function Model({
       if (!(material instanceof THREE.MeshStandardMaterial)) {
         return;
       }
-      
-      // Enable vertex colors even when texture map exists - they will be blended
-      // This allows colors to show through textures
+
+      const baseColor = getMaterialBaseColor(material);
+
+      if (!shouldUseVertexColors) {
+        material.vertexColors = false;
+        material.color.copy(baseColor);
+        material.needsUpdate = true;
+
+        if (partTextureSystem) {
+          partTextureSystem.markBaseLayerDirty(mesh);
+        }
+
+        return;
+      }
+
+      // Enable vertex colors when highlighting or applying part colors.
       material.vertexColors = true;
       
       const positions = geometry.attributes.position;
@@ -495,15 +640,21 @@ function Model({
         colorArray = new Float32Array(positions.count * 3);
         colorBuffersRef.current.set(bufferKey, colorArray);
       }
-      // Reset base to white quickly
-      colorArray.fill(1);
+      // Reset base to the mesh material color so the model keeps its default look.
+      for (let i = 0; i < colorArray.length; i += 3) {
+        colorArray[i] = baseColor.r;
+        colorArray[i + 1] = baseColor.g;
+        colorArray[i + 2] = baseColor.b;
+      }
       
       // Find the part that corresponds to this mesh
       let correspondingPart: MeshPart | null = null;
-      if (hasMultipleMeshes && mesh.name) {
-        // For pre-segmented models, match by mesh name
-        // Cache parts lookup for better performance
-        correspondingPart = parts.find(p => p.name === mesh.name && (!p.meshUuid || p.meshUuid === mesh.uuid)) || null;
+      if (hasMultipleMeshes) {
+        correspondingPart =
+          parts.find((part) => part.meshUuid === mesh.uuid) ||
+          (mesh.name
+            ? parts.find((part) => normalizePartKey(part.name) === normalizePartKey(mesh.name) && (!part.meshUuid || part.meshUuid === mesh.uuid)) || null
+            : null);
       } else if (!hasMultipleMeshes) {
         // For single mesh models, apply colors based on vertex indices
         // This will be handled by the main mesh logic below
@@ -511,9 +662,12 @@ function Model({
       
       // If we found a corresponding part for this mesh, apply its color
       if (correspondingPart) {
-        let finalColor = new THREE.Color(0xffffff);
+        let finalColor = baseColor.clone();
+        const scopedColorKey = `${correspondingPart.name}::${mesh.uuid}`;
         
-        if (partColors[correspondingPart.name]) {
+        if (partColors[scopedColorKey]) {
+          finalColor = new THREE.Color(partColors[scopedColorKey]);
+        } else if (partColors[correspondingPart.name]) {
           finalColor = new THREE.Color(partColors[correspondingPart.name]);
         }
         
@@ -531,9 +685,12 @@ function Model({
       } else if (!hasMultipleMeshes) {
         // For single mesh models, apply colors based on vertex indices
         parts.forEach(part => {
-          let finalColor = new THREE.Color(0xffffff);
+          let finalColor = baseColor.clone();
+          const scopedColorKey = `${part.name}::${mesh.uuid}`;
           
-          if (partColors[part.name]) {
+          if (partColors[scopedColorKey]) {
+            finalColor = new THREE.Color(partColors[scopedColorKey]);
+          } else if (partColors[part.name]) {
             finalColor = new THREE.Color(partColors[part.name]);
           }
           
@@ -612,31 +769,37 @@ function Model({
 
       // Add / update desired decals (order also controls layering)
       desired.forEach((d, index) => {
-        const part = parts.find((p) => p.name === d.partName && (!d.meshUuid || !p.meshUuid || p.meshUuid === d.meshUuid));
-
         const targetMesh = d.meshUuid
           ? allMeshes.find((m) => m.uuid === d.meshUuid) || meshRef
           : meshRef;
 
+        const part = d.meshUuid
+          ? parts.find((p) => p.meshUuid === d.meshUuid)
+          : parts.find((p) => normalizePartKey(p.name) === normalizePartKey(d.partName));
+
         let worldPos: THREE.Vector3;
+        let worldNormal: THREE.Vector3;
         if (d.position) {
           worldPos = new THREE.Vector3(d.position.x, d.position.y, d.position.z);
+          worldNormal = d.normal
+            ? new THREE.Vector3(d.normal.x, d.normal.y, d.normal.z).normalize()
+            : new THREE.Vector3(0, 0, 1);
         } else {
           if (part) {
-            worldPos = targetMesh.localToWorld(part.center.clone());
+            const placement = resolveSurfacePlacementForPart(part, targetMesh);
+            worldPos = placement.position;
+            worldNormal = placement.normal;
           } else {
             const fallback = new THREE.Vector3();
             targetMesh.getWorldPosition(fallback);
             worldPos = fallback;
+            worldNormal = new THREE.Vector3(0, 0, 1);
           }
-          onDecalUpdate?.(d.id, { position: { x: worldPos.x, y: worldPos.y, z: worldPos.z }, meshUuid: targetMesh.uuid });
-        }
-
-        let worldNormal: THREE.Vector3;
-        if (d.normal) {
-          worldNormal = new THREE.Vector3(d.normal.x, d.normal.y, d.normal.z).normalize();
-        } else {
-          worldNormal = new THREE.Vector3(0, 0, 1);
+          onDecalUpdate?.(d.id, {
+            position: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+            normal: { x: worldNormal.x, y: worldNormal.y, z: worldNormal.z },
+            meshUuid: targetMesh.uuid,
+          });
         }
 
         const exists = existing.some((ex) => ex.id === d.id);
@@ -779,28 +942,23 @@ function Model({
         (editorTool === 'pattern' && editorSelectedPattern);
 
       if (clickPlace && onDecalCreate) {
-        const allMeshesLocal: THREE.Mesh[] = [];
-        scene.traverse((child) => {
-          if (child instanceof THREE.Mesh) allMeshesLocal.push(child);
-        });
-        let hits = raycasterRef.current.intersectObjects(allMeshesLocal, false);
+        const meshPool = allMeshes.length > 0 ? allMeshes : [meshRef];
+        let hits = raycasterRef.current.intersectObjects(meshPool, true);
         if (hits.length === 0) hits = raycasterRef.current.intersectObject(meshRef, false);
         if (hits.length > 0) {
           const hit = hits[0];
           const hitMesh = hit.object as THREE.Mesh;
           const point = hit.point;
-          const localPoint = hitMesh.worldToLocal(point.clone());
-          const scopedParts = parts.some(p => !!p.meshUuid)
-            ? parts.filter(p => !p.meshUuid || p.meshUuid === hitMesh.uuid)
-            : parts;
-          const part = findPartAtPoint(localPoint, scopedParts);
+          const part = resolvePartFromHitMesh(hitMesh, point);
           if (part) {
             const id = globalThis.crypto && 'randomUUID' in globalThis.crypto
               ? globalThis.crypto.randomUUID()
               : `decal_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-            const normal = hit.face?.normal
-              ? hit.face.normal.clone().transformDirection(hitMesh.matrixWorld).normalize()
-              : new THREE.Vector3(0, 0, 1);
+            let normal = new THREE.Vector3(0, 0, 1);
+            if (hit.face?.normal) {
+              const normalMatrix = new THREE.Matrix3().getNormalMatrix(hitMesh.matrixWorld);
+              normal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+            }
 
             const decalType = editorTool === 'stamp' ? 'stamp' : editorTool === 'pattern' ? 'pattern' : 'logo';
             const decalValue = editorTool === 'stamp'
@@ -809,15 +967,17 @@ function Model({
                 ? editorSelectedPattern!
                 : editorSelectedLogo!;
 
+            const targetMesh = resolveOwningMeshForHit(hitMesh);
+
             onDecalCreate({
               id,
               type: decalType,
               value: decalValue,
               partName: part.name,
-              meshUuid: hitMesh.uuid,
+              meshUuid: targetMesh.uuid,
               position: { x: point.x, y: point.y, z: point.z },
               normal: { x: normal.x, y: normal.y, z: normal.z },
-              size: 0.5,
+              size: productType === 'wallet' ? 0.8 : 0.5,
               rotation: editorTool === 'pattern' ? (editorPatternRotationDeg * Math.PI) / 180 : 0,
               flipX: false,
               flipY: false,
@@ -839,6 +999,9 @@ function Model({
       const allMeshes: THREE.Mesh[] = [];
       scene.traverse((child) => {
         if (child instanceof THREE.Mesh) {
+          if ((child.userData as { __designPickable?: boolean }).__designPickable === false) {
+            return;
+          }
           allMeshes.push(child);
         }
       });
@@ -855,26 +1018,7 @@ function Model({
         const intersection = intersects[0];
         const point = intersection.point;
         const clickedMesh = intersection.object as THREE.Mesh;
-        
-        // Convert to local space of the mesh that was clicked
-        const localPoint = clickedMesh.worldToLocal(point.clone());
-        
-        // If we have multiple meshes, try to find part by mesh name AND mesh uuid first
-        if (allMeshes.length > 1 && clickedMesh.name) {
-          const partByName = parts.find(
-            p => p.name === clickedMesh.name && (!p.meshUuid || p.meshUuid === clickedMesh.uuid)
-          );
-          if (partByName) {
-            onPartClick(partByName.name);
-            return;
-          }
-        }
-        
-        // Otherwise, scope the search to parts belonging to the clicked mesh (if tagged)
-        const scopedParts = parts.some(p => !!p.meshUuid)
-          ? parts.filter(p => !p.meshUuid || p.meshUuid === clickedMesh.uuid)
-          : parts;
-        const part = findPartAtPoint(localPoint, scopedParts);
+        const part = resolvePartFromHitMesh(clickedMesh, point);
         if (part) {
           onPartClick(part.name);
         } else {
@@ -984,7 +1128,8 @@ function Model({
             normalAttr.getY(bestIndex),
             normalAttr.getZ(bestIndex)
           ).normalize();
-          worldNormal = localNormal.transformDirection(mesh.matrixWorld).normalize();
+          const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+          worldNormal = localNormal.applyMatrix3(normalMatrix).normalize();
         }
 
         return { position: worldPos, normal: worldNormal };
@@ -1064,7 +1209,9 @@ function Model({
 
       const meshes: THREE.Mesh[] = [];
       scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) meshes.push(child);
+        if (!(child instanceof THREE.Mesh)) return;
+        if ((child.userData as { __designPickable?: boolean }).__designPickable === false) return;
+        meshes.push(child);
       });
       let hits = raycasterRef.current.intersectObjects(meshes, false);
       if (hits.length === 0) hits = raycasterRef.current.intersectObject(meshRef, false);
@@ -1082,9 +1229,11 @@ function Model({
       lastPaintAtRef.current = now;
       lastPaintPointRef.current = point.clone();
 
-      const normal = hit.face?.normal
-        ? hit.face.normal.clone().transformDirection(hitMesh.matrixWorld).normalize()
-        : new THREE.Vector3(0, 0, 1);
+      let normal = new THREE.Vector3(0, 0, 1);
+      if (hit.face?.normal) {
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(hitMesh.matrixWorld);
+        normal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+      }
 
       if (editorTool === 'eraser') {
         if (!onDecalDelete) return;
@@ -1139,6 +1288,9 @@ function Model({
       cachedAllMeshes = [];
       scene.traverse((child) => {
         if (child instanceof THREE.Mesh) {
+          if ((child.userData as { __designPickable?: boolean }).__designPickable === false) {
+            return;
+          }
           cachedAllMeshes.push(child);
         }
       });
@@ -1172,21 +1324,7 @@ function Model({
         const intersection = intersects[0];
         const point = intersection.point;
         const hoveredMesh = intersection.object as THREE.Mesh;
-        const localPoint = hoveredMesh.worldToLocal(point.clone());
-        
-        // Try to find part by mesh name first (for pre-segmented models)
-        let part: MeshPart | null = null;
-        if (cachedAllMeshes.length > 1 && hoveredMesh.name) {
-          part = parts.find(p => p.name === hoveredMesh.name && (!p.meshUuid || p.meshUuid === hoveredMesh.uuid)) || null;
-        }
-        
-        // Otherwise use findPartAtPoint scoped to the hovered mesh (only if needed)
-        if (!part && parts.length > 0) {
-          const scopedParts = parts.some(p => !!p.meshUuid)
-            ? parts.filter(p => !p.meshUuid || p.meshUuid === hoveredMesh.uuid)
-            : parts;
-          part = findPartAtPoint(localPoint, scopedParts);
-        }
+        const part = resolvePartFromHitMesh(hoveredMesh, point);
         
         canvas.style.cursor = 'pointer';
         
@@ -1233,6 +1371,8 @@ function Model({
           meshRef={meshRef}
           allMeshes={allMeshes}
           parts={parts}
+          productType={productType}
+          selectedPart={selectedPart}
           onPartDrop={onPartDrop}
         />
       )}

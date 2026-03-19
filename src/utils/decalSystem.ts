@@ -41,7 +41,7 @@ export class DecalSystem {
     return [...this.decalMeshes];
   }
 
-  private buildPartSubGeometry(part: MeshPart, targetMesh: THREE.Mesh): THREE.BufferGeometry {
+  private buildPartSubGeometry(part: MeshPart, targetMesh: THREE.Mesh, projectorLocalNormal?: THREE.Vector3): THREE.BufferGeometry {
     const geometry = targetMesh.geometry;
     const posAttr = geometry.attributes.position;
     const normalAttr = geometry.attributes.normal;
@@ -62,10 +62,34 @@ export class DecalSystem {
       }
     };
 
+    const vA = new THREE.Vector3();
+    const vB = new THREE.Vector3();
+    const vC = new THREE.Vector3();
+    const cb = new THREE.Vector3();
+    const ab = new THREE.Vector3();
+    const faceNormal = new THREE.Vector3();
+
     const includeTri = (a: number, b: number, c: number) => {
       const inCount = (inPart.has(a) ? 1 : 0) + (inPart.has(b) ? 1 : 0) + (inPart.has(c) ? 1 : 0);
       if (inCount < 2) return;
       if (a >= posAttr.count || b >= posAttr.count || c >= posAttr.count) return;
+
+      if (projectorLocalNormal) {
+        vA.set(posAttr.getX(a), posAttr.getY(a), posAttr.getZ(a));
+        vB.set(posAttr.getX(b), posAttr.getY(b), posAttr.getZ(b));
+        vC.set(posAttr.getX(c), posAttr.getY(c), posAttr.getZ(c));
+        cb.subVectors(vC, vB);
+        ab.subVectors(vA, vB);
+        cb.cross(ab);
+        if (cb.lengthSq() > 0) {
+          faceNormal.copy(cb).normalize();
+          // If the face is pointing perpendicular or away from the decal normal, reject it to prevent stretching/bleeding
+          if (faceNormal.dot(projectorLocalNormal) < 0.25) {
+            return;
+          }
+        }
+      }
+
       pushVertex(a);
       pushVertex(b);
       pushVertex(c);
@@ -107,7 +131,17 @@ export class DecalSystem {
     const orientation = new THREE.Euler().setFromQuaternion(q);
 
     if (clipPart) {
-      const subGeom = this.buildPartSubGeometry(clipPart, targetMesh);
+      const normalMatrix = new THREE.Matrix3().getNormalMatrix(targetMesh.matrixWorld).invert();
+      const localNormal = normal.clone().applyMatrix3(normalMatrix).normalize();
+      
+      const subGeom = this.buildPartSubGeometry(clipPart, targetMesh, localNormal);
+      const subPos = subGeom.getAttribute("position");
+
+      if (!subPos || subPos.count === 0) {
+        subGeom.dispose();
+        return new DecalGeometry(targetMesh, position, orientation, size);
+      }
+
       const temp = new THREE.Mesh(subGeom, new THREE.MeshBasicMaterial());
       temp.matrixWorld.copy(targetMesh.matrixWorld);
       temp.matrixAutoUpdate = false;
@@ -193,12 +227,15 @@ export class DecalSystem {
       texture = textureOrPattern;
     }
     
+    // Generous depth, bleeding is prevented by normal-based face culling
+    const depth = Math.max(0.5, size); 
+    
     const decal: Decal = {
       id: decalId,
       texture,
       position: position.clone(),
       normal: normal.clone(),
-      size: new THREE.Vector3(size, size, size),
+      size: new THREE.Vector3(size, size, depth),
       rotation: options?.rotation ?? 0,
       partName,
       color: options?.color,
@@ -496,7 +533,8 @@ export class DecalSystem {
 
     // Update size
     if (updates.size !== undefined) {
-      decal.size.set(updates.size, updates.size, updates.size);
+      const depth = Math.max(0.5, updates.size); 
+      decal.size.set(updates.size, updates.size, depth);
       needsRebuild = true;
     }
 

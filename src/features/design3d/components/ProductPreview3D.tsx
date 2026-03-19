@@ -46,4 +46,4 @@ export function ProductPreview3D({ modelPath }: { modelPath: string }) {
 useGLTF.preload("/models/ao-thun.glb");
 useGLTF.preload("/models/tui-tote.glb");
 useGLTF.preload("/models/balo.glb");
-useGLTF.preload("/models/vi.glb");
+useGLTF.preload("/models/Vi2.glb");
